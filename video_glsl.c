@@ -252,7 +252,7 @@ GLuint compileShader(char* sourceOrFilename, GLuint shaderType, int is_source) {
     if(!is_source)
         source = readShaderFile(sourceOrFilename, shaderType);
 #if !GLES
-    sprintf(shaderBuffer,"%s\r\n",glversion_major>3 ? "#version 330" : "#version 110");
+    sprintf(shaderBuffer,"%s\r\n",glversion_major>=3 ? "#version 330" : "#version 110");
 #else
     sprintf(shaderBuffer,"%s\r\n","#version 100");
 #endif
