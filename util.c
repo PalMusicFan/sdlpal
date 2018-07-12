@@ -441,6 +441,11 @@ UTIL_OpenRequiredFileForMode(
 
    if (fp == NULL)
    {
+       fp = fopen(lpszFileName, szMode);
+   }
+
+   if (fp == NULL)
+   {
 	   TerminateOnError("File open error(%d): %s!\n", errno, lpszFileName);
    }
 
