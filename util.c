@@ -916,6 +916,9 @@ UTIL_LogOutput(
 			_log_callbacks[id](level, _log_buffer, _log_buffer + PAL_LOG_BUFFER_EXTRA_SIZE - 1);
 		}
 	}
+    
+    if( level == LOGLEVEL_FATAL )
+        TerminateOnError(_log_buffer);
 }
 
 void

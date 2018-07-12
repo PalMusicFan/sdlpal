@@ -245,28 +245,29 @@ char *skip_version(char *src) {
 GLuint compileShader(char* sourceOrFilename, GLuint shaderType, int is_source) {
     //DONT CHANGE
 #define SHADER_TYPE(shaderType) (shaderType == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT")
-    char shaderBuffer[65536];
-    const char *pBuf = shaderBuffer;
-    memset(shaderBuffer,0,sizeof(shaderBuffer));
+    char *pShaderBuffer;
     char *source = sourceOrFilename;
     if(!is_source)
         source = readShaderFile(sourceOrFilename, shaderType);
+    size_t sourceLen = strlen(source)*2;
+    pShaderBuffer = malloc(sourceLen);
+    memset(pShaderBuffer,0, sourceLen);
 #if !GLES
-    sprintf(shaderBuffer,"%s\r\n",glversion_major>=3 ? "#version 330" : "#version 110");
+    sprintf(pShaderBuffer,"%s\r\n",glversion_major>=3 ? "#version 330" : "#version 110");
 #else
-    sprintf(shaderBuffer,"%s\r\n","#version 100");
+    sprintf(pShaderBuffer,"%s\r\n","#version 100");
 #endif
 #if SUPPORT_PARAMETER_UNIFORM
-    sprintf(shaderBuffer,"%s#define PARAMETER_UNIFORM\r\n",shaderBuffer);
+    sprintf(pShaderBuffer,"%s#define PARAMETER_UNIFORM\r\n",shaderBuffer);
 #endif
-    sprintf(shaderBuffer,"%s#define %s\r\n%s\r\n",shaderBuffer,SHADER_TYPE(shaderType),is_source ? source : skip_version(source));
+    sprintf(pShaderBuffer,"%s#define %s\r\n%s\r\n",pShaderBuffer,SHADER_TYPE(shaderType),is_source ? source : skip_version(source));
     if(!is_source)
         free((void*)source);
     
     // Create ID for shader
     GLuint result = glCreateShader(shaderType);
     // Define shader text
-    glShaderSource(result, 1, &pBuf, NULL);
+    glShaderSource(result, 1, &pShaderBuffer, NULL);
     // Compile shader
     glCompileShader(result);
     
@@ -280,13 +281,14 @@ GLuint compileShader(char* sourceOrFilename, GLuint shaderType, int is_source) {
         {
             GLchar *log = (GLchar*)malloc(logLength);
             glGetShaderInfoLog(result, logLength, &logLength, log);
-            UTIL_LogOutput(LOGLEVEL_DEBUG, "shader %s compilation error:%s\n", is_source ? "stock" : sourceOrFilename,log);
+            UTIL_LogOutput(LOGLEVEL_FATAL, "shader %s compilation error:%s\n", is_source ? "stock" : sourceOrFilename,log);
             free(log);
         }
         glDeleteShader(result);
         result = 0;
     }else
         UTIL_LogOutput(LOGLEVEL_DEBUG, "%s shader %s compilation succeed!\n", SHADER_TYPE(shaderType), is_source ? "stock" : sourceOrFilename );
+    free(pShaderBuffer);
     return result;
 }
 
@@ -412,9 +414,29 @@ void setupShaderParams(int pass, bool mainShader, bool presentShader){
     }
 }
 
-SDL_Texture *load_texture(char *name, char *path, enum wrap_mode mode) {
+GLint get_gl_wrap_mode(enum wrap_mode mode) {
+    switch (mode) {
+        case WRAP_REPEAT:
+            return GL_REPEAT;
+        case WRAP_CLAMP_TO_EDGE:
+            return GL_CLAMP_TO_EDGE;
+        case WRAP_CLAMP_TO_BORDER:
+            return GL_CLAMP_TO_BORDER;
+        default:
+            return GL_INVALID_ENUM;
+    }
+}
+
+SDL_Texture *load_texture(char *name, char *path, bool filter_linear, enum wrap_mode mode) {
     SDL_Surface *surf = STBIMG_Load(PAL_va(0, "%s/%s",gConfig.pszShaderPath,path));
+    if( filter_linear )
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     SDL_Texture *texture = SDL_CreateTextureFromSurface(gpRenderer, surf);
+    if( filter_linear )
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    SDL_GL_BindTexture(texture, NULL, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(mode));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(mode));
     return texture;
 }
 int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_Rect * srcrect, const SDL_Rect * dstrect, int pass)
@@ -428,6 +450,12 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
     
     glActiveTexture(GL_TEXTURE0);
     SDL_GL_BindTexture(texture, &texw, &texh);
+    if( flagGLSLP ) {
+        if(gGLSLP.shader_params[gGLSLP.shaders-1].scale_type_x == SCALE_ABSOLUTE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        if(gGLSLP.shader_params[gGLSLP.shaders-1].scale_type_y == SCALE_ABSOLUTE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    }
     
     //calc texture unit:1(main texture)+glslp_textures+glsl_uniform_textures(orig,pass(1-6),prev(1-6))
     
@@ -844,13 +872,15 @@ void VIDEO_GLSL_Setup() {
     if( strcmp( strrchr(gConfig.pszShader, '.'), ".glslp") == 0 ) {
         flagGLSLP = parse_glslp(gConfig.pszShader);
         if( flagGLSLP ) {
+            assert(gGLSLP.shaders > 0);
             for( int i = 0; i < gGLSLP.shaders; i++ ) {
                 UTIL_LogSetPrelude(PAL_va(0,"[PASS 3.%d] ",i+1));
                 gProgramIds[id+i] = compileProgram(gGLSLP.shader_params[i].shader, gGLSLP.shader_params[i].shader, 0);
             }
             for( int i = 0; i < gGLSLP.textures; i++ ) {
-                char *texture_name = gGLSLP.texture_params[i].texture_name;
-                gGLSLP.texture_params[i].sdl_texture = load_texture(texture_name, gGLSLP.texture_params[i].texture_path, gGLSLP.texture_params[i].wrap_mode);
+                texture_param *param = &gGLSLP.texture_params[i];
+                char *texture_name = param->texture_name;
+                gGLSLP.texture_params[i].sdl_texture = load_texture(texture_name, param->texture_path, param->linear, param->wrap_mode);
                 for( int j = 0; j < gGLSLP.shaders; j++ )
                     gGLSLP.texture_params[i].slots[id+j] = glGetUniformLocation(gProgramIds[id+j], texture_name);
             }

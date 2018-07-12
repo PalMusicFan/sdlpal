@@ -11,20 +11,20 @@
 #include "main.h"
 
 #define MAX_FBO 8
-#define MAX_INDEX (MAX_FBO+2)
+#define MAX_INDEX 26
 
 #define MAX_TEXTURES 8
 
 enum wrap_mode {
-    REPEAT,
-    CLAMP_TO_EDGE,
-    CLAMP_TO_BORDER
+    WRAP_REPEAT,
+    WRAP_CLAMP_TO_EDGE,
+    WRAP_CLAMP_TO_BORDER
 };
 
 enum scale_type {
-    SOURCE,
-    VIEWPORT,
-    ABSOLUTE
+    SCALE_SOURCE,
+    SCALE_VIEWPORT,
+    SCALE_ABSOLUTE
 };
 
 typedef struct tagTEXTUREUNITSLOTS {
@@ -37,12 +37,12 @@ typedef struct tagTEXTUREUNITSLOTS {
 typedef struct tagSHADERPARAM {
     //by defination
     char *shader;
+    char *alias;
     bool filter_linear;
     enum wrap_mode wrap_mode;
-    enum scale_type scale_type, scale_type_x, scale_type_y;
-    float scale, scale_x, scale_y;
+    enum scale_type scale_type_x, scale_type_y;
+    double scale_x, scale_y;
     bool mipmap_input;
-    char *alias;
     bool float_framebuffer;
     bool srgb_framebuffer;
     int frame_count_mod;
@@ -62,6 +62,8 @@ typedef struct tagTEXTUREPARAMS {
     char *texture_name;
     char *texture_path;
     enum wrap_mode wrap_mode;
+    bool linear;
+    bool mipmap;
     
     //by implementation
     SDL_Texture *sdl_texture;
