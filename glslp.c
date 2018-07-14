@@ -5,6 +5,9 @@
 //  Created by palxex on 11/7/18.
 //
 
+#include "main.h"
+
+#if PAL_HAS_GLSL
 #include "glslp.h"
 
 GLSLP gGLSLP;
@@ -364,3 +367,5 @@ void destroy_glslp() {
     free(gGLSLP.uniform_params);
     memset(&gGLSLP, 0, sizeof(GLSLP));
 }
+
+#endif // PAL_HAS_GLSL

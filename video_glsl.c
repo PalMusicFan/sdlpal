@@ -98,7 +98,7 @@ GLKMatrix4 GLKMatrix4MakeOrtho(float left, float right,
     return m;
 }
 
-static __attribute__((noinline)) unsigned next_pow2(unsigned x)
+static unsigned next_pow2(unsigned x)
 {
     x -= 1;
     x |= (x >> 1);
@@ -403,6 +403,14 @@ void setupShaderParams(int pass, bool mainShader, bool presentShader){
     }
 }
 
+GLint get_gl_clamp_to_border() {
+#ifdef __IOS__
+    return GL_CLAMP_TO_EDGE;
+#else
+    return GL_CLAMP_TO_BORDER;
+#endif
+}
+
 GLint get_gl_wrap_mode(enum wrap_mode mode) {
     switch (mode) {
         case WRAP_REPEAT:
@@ -410,7 +418,7 @@ GLint get_gl_wrap_mode(enum wrap_mode mode) {
         case WRAP_CLAMP_TO_EDGE:
             return GL_CLAMP_TO_EDGE;
         case WRAP_CLAMP_TO_BORDER:
-            return GL_CLAMP_TO_BORDER;
+            return get_gl_clamp_to_border();
         default:
             return GL_INVALID_ENUM;
     }
@@ -486,9 +494,9 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
     SDL_GL_BindTexture(texture, &texw, &texh);
 
     if(gGLSLP.shader_params[gGLSLP.shaders-1].scale_type_x == SCALE_ABSOLUTE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_clamp_to_border());
     if(gGLSLP.shader_params[gGLSLP.shaders-1].scale_type_y == SCALE_ABSOLUTE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_clamp_to_border());
     
     //calc texture unit:1(main texture)+glslp_textures+glsl_uniform_textures(orig,pass(1-6),prev(1-6))
     
