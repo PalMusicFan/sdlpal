@@ -217,9 +217,12 @@ enum wrap_mode get_wrap_mode(const char *value) {
 
 char *basename(const char *filename) {
     char *pos = NULL;
+    int broked = 0;
     for( int i=0;i<strlen(PAL_PATH_SEPARATORS);i++)
         if( (pos = strrchr(filename,PAL_PATH_SEPARATORS[i])) != NULL )
-            *pos='\0';
+            *pos='\0', broked = 1;
+    if( !broked )
+        sprintf((char*)filename, "./");
     return (char*)filename;
 }
 
@@ -227,6 +230,8 @@ bool parse_glslp(const char *filename) {
     destroy_glslp();
     
     FILE *fp = UTIL_OpenFileAtPathForMode(gConfig.pszShaderPath, filename, "r");
+    if( !fp )
+        TerminateOnError("GLSLP %s/%s cannot be open!", gConfig.pszShaderPath, filename);
     char *basedir = strdup(basename(filename));
 
     if (fp)
@@ -250,6 +255,8 @@ bool parse_glslp(const char *filename) {
                         for( int i = 0; i < gGLSLP.shaders; i++ ) {
                             shader_param *param = &gGLSLP.shader_params[i];
                             clear_shader_slots(param);
+                            param->scale_type_x = param->scale_type_y = SCALE_SOURCE;
+                            param->scale_x = param->scale_y = 1.0f;
                         }
                         break;
                     }
