@@ -45,13 +45,13 @@ static SDL_Texture *origTexture;
 
 static char *frame_prev_prefixes[MAX_TEXTURES] = {
     "",
-    "PREV",
-    "PREV1",
-    "PREV2",
-    "PREV3",
-    "PREV4",
-    "PREV5",
-    "PREV6",
+    "Prev",
+    "Prev1",
+    "Prev2",
+    "Prev3",
+    "Prev4",
+    "Prev5",
+    "Prev6",
 };
 static SDL_Texture *framePrevTextures[MAX_TEXTURES] = {NULL};
 static int frame_prev_texture_units[MAX_TEXTURES] = {-1};
@@ -585,14 +585,12 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
     }
     if( pass >= 2 ) {
         //share for all retro-filter
-        if( gGLSLP.shader_params[shaderID].self_slots.frame_direction_uniform_location >= 0 )
-            glUniform1i(gGLSLP.shader_params[shaderID].self_slots.frame_direction_uniform_location, 1.0); //SDLPal don't support rewinding so direction is always 1
+        glUniform1i(gGLSLP.shader_params[shaderID].self_slots.frame_direction_uniform_location, 1.0); //SDLPal don't support rewinding so direction is always 1
         
         GLint frame_to_slot = frames;
         if( gGLSLP.shader_params[shaderID].frame_count_mod )
             frame_to_slot %= gGLSLP.shader_params[shaderID].frame_count_mod;
-        if( gGLSLP.shader_params[shaderID].self_slots.frame_count_uniform_location >= 0 )
-            glUniform1i(gGLSLP.shader_params[shaderID].self_slots.frame_count_uniform_location, frame_to_slot);
+        glUniform1i(gGLSLP.shader_params[shaderID].self_slots.frame_count_uniform_location, frame_to_slot);
         
         //share for all retro-pass
         //self
@@ -736,8 +734,6 @@ SDL_Texture *VIDEO_GLSL_CreateTexture(int width, int height)
         gTextureRect.w = width; gTextureRect.h = height;
         VIDEO_SetupTouchArea(width, height, width, height);
     }
-    
-    int viewport_pow = next_pow2(max(gConfig.dwTextureWidth,gConfig.dwTextureHeight));
 
     for( int i = 0; i < gGLSLP.shaders; i++ ) {
         shader_param *param = &gGLSLP.shader_params[i];
@@ -788,7 +784,7 @@ SDL_Texture *VIDEO_GLSL_CreateTexture(int width, int height)
     for( int i = 0; i < MAX_TEXTURES; i++ ) {
         if( framePrevTextures[i] )
             SDL_DestroyTexture(framePrevTextures[i]);
-        framePrevTextures[i] = SDL_CreateTexture(gpRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, viewport_pow, viewport_pow);
+        framePrevTextures[i] = SDL_CreateTexture(gpRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, gConfig.dwTextureWidth, gConfig.dwTextureHeight);
     }
     return framePrevTextures[0];
 }
