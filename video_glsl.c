@@ -513,7 +513,7 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
     
     int texture_unit_used = 1;
     int touchoverlay_texture_slot = -1;
-    if( pass == 0 && gConfig.fUseTouchOverlay ) {
+    if( pass == 0 ) {
         glActiveTexture(GL_TEXTURE0+texture_unit_used);
         SDL_GL_BindTexture(gpTouchOverlay, NULL, NULL);
         touchoverlay_texture_slot = texture_unit_used++;
@@ -570,8 +570,7 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
         GLint HDR = gConfig.fEnableHDR;
         glUniform1i(gHDRSlot, HDR);
         glUniform1i(gSRGBSlot, manualSRGB);
-        if( gConfig.fUseTouchOverlay )
-            glUniform1i(gTouchOverlaySlot, touchoverlay_texture_slot);
+        glUniform1i(gTouchOverlaySlot, touchoverlay_texture_slot);
     }
 
     //global
