@@ -232,7 +232,7 @@ VIDEO_Startup(
       if (overlay != NULL)
       {
          SDL_SetColorKey(overlay, SDL_RLEACCEL, SDL_MapRGB(overlay->format, 255, 0, 255));
-         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, gConfig.pszScaleQuality);
+         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
          gpTouchOverlay = SDL_CreateTextureFromSurface(gpRenderer, overlay);
          SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
          SDL_SetTextureAlphaMod(gpTouchOverlay, 120);
@@ -315,7 +315,8 @@ VIDEO_Shutdown(
 --*/
 {
 #if PAL_HAS_GLSL
-	if( gConfig.fEnableGLSL) {
+    // since gConfig is cleared already we'd to detect on side effects
+	if( gRenderBackend.Init == VIDEO_GLSL_Init ) {
 		VIDEO_GLSL_Destroy();
 	}
 #endif
