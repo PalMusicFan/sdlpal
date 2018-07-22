@@ -869,6 +869,9 @@ void VIDEO_GLSL_Init() {
     Uint32 flags = PAL_VIDEO_INIT_FLAGS | (gConfig.fFullScreen ? SDL_WINDOW_BORDERLESS : 0) | SDL_WINDOW_OPENGL;
     gpWindow = SDL_CreateWindow("Pal", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, gConfig.dwScreenWidth, gConfig.dwScreenHeight, flags);
     if (gpWindow == NULL) {
+        UTIL_LogOutput(LOGLEVEL_DEBUG, "create window failed!%s\n", SDL_GetError());
+        UTIL_LogOutput(LOGLEVEL_DEBUG, "reverting to: gl %s %d.%d, %s srgb \n", orig_profile ? "core" : "compatible", orig_major, orig_minor, orig_srgb ? "EXT" : "manual" );
+        
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, orig_major);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, orig_minor);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,  orig_profile);
