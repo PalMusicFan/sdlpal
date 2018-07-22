@@ -412,20 +412,28 @@ GLint get_gl_clamp_to_border() {
 #endif
 }
 
-GLint get_gl_wrap_mode(enum wrap_mode mode) {
+GLint get_gl_wrap_mode(enum wrap_mode mode, enum scale_type type) {
+    GLint gl_wrap_mode = GL_INVALID_ENUM;
     switch (mode) {
         case WRAP_REPEAT:
-            return GL_REPEAT;
+            gl_wrap_mode = GL_REPEAT;
+            break;
         case WRAP_CLAMP_TO_EDGE:
-            return GL_CLAMP_TO_EDGE;
+            gl_wrap_mode = GL_CLAMP_TO_EDGE;
+            break;
         case WRAP_CLAMP_TO_BORDER:
-            return get_gl_clamp_to_border();
+            gl_wrap_mode = get_gl_clamp_to_border();
+            break;
         default:
-            return GL_INVALID_ENUM;
+            gl_wrap_mode = GL_INVALID_ENUM;
+            break;
     }
+    if( type == SCALE_ABSOLUTE )
+        gl_wrap_mode = get_gl_clamp_to_border();
+    return gl_wrap_mode;
 }
 
-SDL_Texture *load_texture(char *name, char *filename, bool filter_linear, enum wrap_mode mode) {
+SDL_Texture *load_texture(char *name, char *filename, bool filter_linear, enum wrap_mode mode, enum scale_type type) {
     SDL_Surface *surf = STBIMG_Load(get_glslp_path(filename));
     if( !surf )
         TerminateOnError("Texture %s cannot be open!", get_glslp_path(filename));
@@ -434,8 +442,8 @@ SDL_Texture *load_texture(char *name, char *filename, bool filter_linear, enum w
     SDL_Texture *texture = SDL_CreateTextureFromSurface(gpRenderer, surf);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_GL_BindTexture(texture, NULL, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(mode));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(mode));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(mode, type));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(mode, type));
     return texture;
 }
 
@@ -452,16 +460,19 @@ void GetMultiPassUniformLocations(pass_uniform_locations *pSlot, int programID, 
 //
 //#define glUniform1i fake_glUniform1i
 
-void SetMultiPassUniforms(pass_uniform_locations *pSlot, int shaderID, int texture_unit) {
+void SetGroupUniforms(pass_uniform_locations *pSlot, int shaderID, int texture_unit, bool is_pass) {
     glUniform1i(pSlot->texture_uniform_location, texture_unit);
 
     GLfloat size[2];
-    size[0] = shaderID > 0 ? gGLSLP.shader_params[shaderID-1].FBO.width  : 320;
-    size[1] = shaderID > 0 ? gGLSLP.shader_params[shaderID-1].FBO.height : 200;
+    if( is_pass ) {
+        size[0] = (shaderID > 0) ? gGLSLP.shader_params[shaderID-1].FBO.width  : 320;
+        size[1] = (shaderID > 0) ? gGLSLP.shader_params[shaderID-1].FBO.height : 200;
+    }else
+        size[0] = 320, size[1] = 200;
     glUniform2fv(pSlot->texture_size_uniform_location, 1, size);
     glUniform2fv(pSlot->input_size_uniform_location, 1, size);
-    size[0] = gGLSLP.shader_params[shaderID].FBO.width;
-    size[1] = gGLSLP.shader_params[shaderID].FBO.height;
+    size[0] = is_pass ? gGLSLP.shader_params[shaderID].FBO.width  : gConfig.dwTextureWidth;
+    size[1] = is_pass ? gGLSLP.shader_params[shaderID].FBO.height : gConfig.dwTextureHeight;
     glUniform2fv(pSlot->output_size_uniform_location,  1, size);
     
 //    glEnableVertexAttribArray(pSlot->tex_coord_attrib_location);
@@ -502,13 +513,9 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
     
     glActiveTexture(GL_TEXTURE0);
     SDL_GL_BindTexture(texture, &texw, &texh);
-    gGLSLP.shader_params[shaderID].self_slots.texture_unit = 0;
+    if( shaderID >= 0 )
+        gGLSLP.shader_params[shaderID].self_slots.texture_unit = 0;
 
-    if(gGLSLP.shader_params[gGLSLP.shaders-1].scale_type_x == SCALE_ABSOLUTE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_clamp_to_border());
-    if(gGLSLP.shader_params[gGLSLP.shaders-1].scale_type_y == SCALE_ABSOLUTE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_clamp_to_border());
-    
     //calc texture unit:1(main texture)+glslp_textures+glsl_uniform_textures(orig,pass(1-6),prev(1-6))
     
     int texture_unit_used = 1;
@@ -590,21 +597,21 @@ int VIDEO_RenderTexture(SDL_Renderer * renderer, SDL_Texture * texture, const SD
         
         //share for all retro-pass
         //self
-        SetMultiPassUniforms(&gGLSLP.shader_params[shaderID].self_slots,         shaderID, 0 );
+        SetGroupUniforms(&gGLSLP.shader_params[shaderID].self_slots,         shaderID, 0, false );
         //orig
-        SetMultiPassUniforms(&gGLSLP.shader_params[shaderID].orig_slots,         shaderID, orig_texture_unit );
+        SetGroupUniforms(&gGLSLP.shader_params[shaderID].orig_slots,         shaderID, orig_texture_unit, false );
         //prev-prev%
         for( int i = 1; i < (frames_passed_limit ? MAX_TEXTURES : min(frames, MAX_TEXTURES)); i++ )
-            SetMultiPassUniforms(&gGLSLP.shader_params[shaderID].prev_slots[i],         i, frame_prev_texture_units[i] );
+            SetGroupUniforms(&gGLSLP.shader_params[shaderID].prev_slots[i],         i, frame_prev_texture_units[i], false );
         if( pass >= 2 ){
             //pass%
             for( int i = 0; i < shaderID-1; i++ )
-                SetMultiPassUniforms(&gGLSLP.shader_params[shaderID].pass_slots[i],     i, gGLSLP.shader_params[shaderID].pass_slots[i].texture_unit );
+                SetGroupUniforms(&gGLSLP.shader_params[shaderID].pass_slots[i],     i, gGLSLP.shader_params[shaderID].pass_slots[i].texture_unit, true );
             //passprev%
             for( int i = shaderID-1; i >= 0; i-- )
-                SetMultiPassUniforms(&gGLSLP.shader_params[shaderID].passprev_slots[i], i, gGLSLP.shader_params[shaderID].pass_slots[i].texture_unit );
+                SetGroupUniforms(&gGLSLP.shader_params[shaderID].passprev_slots[i], i, gGLSLP.shader_params[shaderID].pass_slots[i].texture_unit, true );
             //alias
-            SetMultiPassUniforms(&gGLSLP.shader_params[shaderID].alias_slots,    shaderID, gGLSLP.shader_params[shaderID].alias_slots.texture_unit );
+            SetGroupUniforms(&gGLSLP.shader_params[shaderID].alias_slots,    shaderID, gGLSLP.shader_params[shaderID].alias_slots.texture_unit, false );
         }
     }
     
@@ -733,7 +740,7 @@ SDL_Texture *VIDEO_GLSL_CreateTexture(int width, int height)
     for( int i = 0; i < gGLSLP.shaders; i++ ) {
         shader_param *param = &gGLSLP.shader_params[i];
         shader_param *param_next_pass = &gGLSLP.shader_params[i+i];
-        if( i== gGLSLP.shaders )
+        if( i== gGLSLP.shaders - 1 )
             param_next_pass = NULL;
         
         if( param->pass_sdl_texture )
@@ -770,8 +777,8 @@ SDL_Texture *VIDEO_GLSL_CreateTexture(int width, int height)
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
         SDL_GL_BindTexture(param->pass_sdl_texture, NULL, NULL);
         if( param_next_pass ) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(param_next_pass->wrap_mode));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(param_next_pass->wrap_mode));
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(param_next_pass->wrap_mode, param_next_pass->scale_type_x));
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(param_next_pass->wrap_mode, param_next_pass->scale_type_y));
         }
         //lacks parameter processing:
         //srgb   - already srgb,    need figure what retroarch is
@@ -799,8 +806,8 @@ void VIDEO_GLSL_RenderCopy()
     origTexture = SDL_CreateTextureFromSurface(gpRenderer, gpScreenReal);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_GL_BindTexture(origTexture, NULL, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(gGLSLP.shader_params[0].wrap_mode));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(gGLSLP.shader_params[0].wrap_mode));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, get_gl_wrap_mode(gGLSLP.shader_params[0].wrap_mode, gGLSLP.shader_params[0].scale_type_x));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, get_gl_wrap_mode(gGLSLP.shader_params[0].wrap_mode, gGLSLP.shader_params[0].scale_type_y));
 
     SDL_Texture *prevTexture = origTexture;
     gPassID = 0;
@@ -849,8 +856,6 @@ void VIDEO_GLSL_Init() {
 #else
     SDL_SetHint( SDL_HINT_RENDER_DRIVER, "opengl");
 #   if FORCE_OPENGL_CORE_PROFILE
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 #   endif
 #endif
@@ -892,14 +897,13 @@ void VIDEO_GLSL_Setup() {
     UTIL_LogOutput(LOGLEVEL_DEBUG, "render info:%s\n",rendererInfo.name);
     if(!strncmp(rendererInfo.name, "opengl", 6)) {
 #     ifndef __APPLE__
-        // If you want to use GLEW or some other GL extension handler, do it here!
-        if (!initGLExtensions()) {
-            UTIL_LogOutput(LOGLEVEL_DEBUG,  "Couldn't init GL extensions!\n" );
-            SDL_Quit();
-            exit(-1);
-        }
+        if (!initGLExtensions())
+            UTIL_LogOutput(LOGLEVEL_FATAL,  "Couldn't init GL extensions!\n" );
 #     endif
-    }
+	}
+	else
+		UTIL_LogOutput(LOGLEVEL_FATAL, "OpenGL initial failed, check your code!\n");
+
     char *glversion = (char*)glGetString(GL_VERSION);
     char *glslversion = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_VENDOR:%s\n",glGetString(GL_VENDOR));
@@ -960,7 +964,7 @@ void VIDEO_GLSL_Setup() {
     
     if(VAOSupported) glBindVertexArray(gVAOIds[id]);
     glBindBuffer( GL_ARRAY_BUFFER, gVBOIds[id] );
-    glBufferData( GL_ARRAY_BUFFER, 4 * sizeof(struct VertexDataFormat), vData, GL_DYNAMIC_DRAW );
+    glBufferData( GL_ARRAY_BUFFER, 4 * sizeof(struct VertexDataFormat), vData, GL_STATIC_DRAW );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, gEBOId );
     UTIL_LogSetPrelude("[PASS 1] ");
     gProgramIds[id] = compileProgram(plain_glsl_vert, plain_glsl_frag, 1);
@@ -995,7 +999,7 @@ void VIDEO_GLSL_Setup() {
     for( int i = 0; i < gGLSLP.textures; i++ ) {
         texture_param *param = &gGLSLP.texture_params[i];
         char *texture_name = param->texture_name;
-        gGLSLP.texture_params[i].sdl_texture = load_texture(texture_name, param->texture_path, param->linear, param->wrap_mode);
+        gGLSLP.texture_params[i].sdl_texture = load_texture(texture_name, param->texture_path, param->linear, param->wrap_mode, SCALE_SOURCE);
         for( int j = 0; j < gGLSLP.shaders; j++ )
             gGLSLP.texture_params[i].slots_pass[id+j] = glGetUniformLocation(gProgramIds[id+j], texture_name);
     }

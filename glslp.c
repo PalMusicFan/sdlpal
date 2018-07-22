@@ -351,7 +351,6 @@ bool parse_glslp(const char *filename) {
 }
 
 void destroy_glslp() {
-    free(gGLSLP.shader_params);
     for( int i = 0; i < gGLSLP.shaders; i++ ) {
         shader_param *param = &gGLSLP.shader_params[i];
         if(param->shader)
@@ -361,6 +360,7 @@ void destroy_glslp() {
         if(param->pass_sdl_texture )
             SDL_DestroyTexture( gGLSLP.shader_params[i].pass_sdl_texture );
     }
+	free(gGLSLP.shader_params);
     for( int i=0; i<gGLSLP.textures; i++ ) {
         texture_param *param = &gGLSLP.texture_params[i];
         if(param->texture_name)
