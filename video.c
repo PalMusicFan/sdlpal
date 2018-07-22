@@ -411,7 +411,7 @@ VIDEO_RenderCopy(
 	SDL_UnlockTexture(gpTexture);
 
 	SDL_RenderCopy(gpRenderer, gpTexture, NULL, NULL);
-	if (gpTouchOverlay)
+	if (gConfig.fUseTouchOverlay)
 	{
 		SDL_RenderCopy(gpRenderer, gpTouchOverlay, NULL, &gOverlayRect);
 	}
