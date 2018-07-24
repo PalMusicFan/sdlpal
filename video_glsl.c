@@ -204,16 +204,19 @@ return pow((channel + SRGB_ALPHA) / (1.0 + SRGB_ALPHA), 2.4);    \r\n\
 vec3 srgb_to_rgb(vec3 srgb) {       \r\n\
 return vec3(srgb_to_linear(srgb.r),    srgb_to_linear(srgb.g),    srgb_to_linear(srgb.b));\r\n\
 }\r\n\
-vec4 calc_transparent_color(vec4 color){   \r\n\
-float sat = (color.r+color.g+color.b)/3.0; \r\n\
+vec4 blend(vec4 src, vec4 dst){     \r\n\
+float sat = (dst.r+dst.g+dst.b)/3.0;\r\n\
 vec3 average = vec3(sat,sat,sat);   \r\n\
-color.rgb -= average*0.8;           \r\n\
-color.a=0.5;                        \r\n\
-return color;                       \r\n\
+dst.rgb -= average*0.8;             \r\n\
+dst.a=0.5;                          \r\n\
+vec4 sfactor = vec4(1,1,1,1);       \r\n\
+vec4 dfactor = vec4(1,1,1,1);       \r\n\
+return src*sfactor+dst*dfactor;     \r\n\
 }\r\n\
 void main()                         \r\n\
 {                                   \r\n\
-FragColor = vec4(srgb_to_rgb(COMPAT_TEXTURE(tex0 , v_texCoord.xy).rgb), 1.0);  \r\n\
+vec4 srgb = COMPAT_TEXTURE(tex0 , v_texCoord.xy);   \r\n\
+FragColor = vec4(srgb_to_rgb(srgb.rgb), srgb.a);  \r\n\
 #ifdef GL_ES                        \r\n\
 FragColor.rgb = FragColor.bgr;      \r\n\
 #endif                              \r\n\
@@ -223,7 +226,7 @@ color = ACESFilm(color);            \r\n\
 if( sRGB > 0 )                      \r\n\
 color = rgb_to_srgb(color);         \r\n\
 FragColor.rgb=color;                \r\n\
-FragColor += calc_transparent_color(COMPAT_TEXTURE(TouchOverlay , v_texCoord.xy));     \r\n\
+FragColor = blend(FragColor, COMPAT_TEXTURE(TouchOverlay , v_texCoord.xy));     \r\n\
 }";
 
 static char *glslp_template = "\r\n\
