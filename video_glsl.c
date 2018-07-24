@@ -898,17 +898,18 @@ void VIDEO_GLSL_Setup() {
         frame_prev_texture_units[i] = -1;
     
     UTIL_LogOutput(LOGLEVEL_DEBUG, "render info:%s\n",rendererInfo.name);
+
+    char *glversion = (char*)glGetString(GL_VERSION);
+    char *glslversion = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+    SDL_sscanf(glversion, "%d.%d", &glversion_major, &glversion_minor);
     if(!strncmp(rendererInfo.name, "opengl", 6)) {
 #     ifndef __APPLE__
-        if (!initGLExtensions())
+        if (!initGLExtensions(glversion_major))
             UTIL_LogOutput(LOGLEVEL_FATAL,  "Couldn't init GL extensions!\n" );
 #     endif
 	}
 	else
 		UTIL_LogOutput(LOGLEVEL_FATAL, "OpenGL initial failed, check your code!\n");
-
-    char *glversion = (char*)glGetString(GL_VERSION);
-    char *glslversion = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_VENDOR:%s\n",glGetString(GL_VENDOR));
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_VERSION:%s\n",glversion);
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_SHADING_LANGUAGE_VERSION:%s\n",glslversion);
@@ -920,7 +921,6 @@ void VIDEO_GLSL_Setup() {
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_MAX_TEXTURE_SIZE:%d\n",maxTextureSize);
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_MAX_DRAW_BUFFERS:%d\n",maxDrawBuffers);
     UTIL_LogOutput(LOGLEVEL_DEBUG, "GL_MAX_COLOR_ATTACHMENTS:%d\n",maxColorAttachments);
-    SDL_sscanf(glversion, "%d.%d", &glversion_major, &glversion_minor);
     if( glversion_major >= 3 ) {
         GLint n, i;
         glGetIntegerv(GL_NUM_EXTENSIONS, &n);
