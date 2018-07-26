@@ -1013,8 +1013,8 @@ void VIDEO_GLSL_Setup() {
     if( SDL_strcasecmp( strrchr(gConfig.pszShader, '.'), ".glsl") == 0 ) {
         UTIL_LogOutput(LOGLEVEL_DEBUG, "[PASS 2] loading %s\n", gConfig.pszShader);
         char *tempFile = "sdlpal.glslp";
-        FILE *fp = UTIL_OpenFileAtPathForMode(gConfig.pszShaderPath, tempFile, "wt"); //follow retroarch spec, this folder needs to be writable
-        fputs( PAL_va( 0, glslp_template, gConfig.pszShader, gConfig.dwTextureWidth, gConfig.dwTextureHeight, SDL_strcasecmp( gConfig.pszScaleQuality, "1" ) == 0 ? "true" : "false" ), fp );
+        FILE *fp = UTIL_OpenFileForMode(tempFile, "w"); //follow retroarch spec, this folder needs to be writable
+        fputs( PAL_va( 0, glslp_template, gConfig.pszShader, gConfig.dwTextureWidth, gConfig.dwTextureHeight, (gConfig.pszScaleQuality && SDL_strcasecmp( gConfig.pszScaleQuality, "1" )) == 0 ? "true" : "false" ), fp );
         fclose(fp);
         origGLSL = gConfig.pszShader;
         gConfig.pszShader = strdup(tempFile);
