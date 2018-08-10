@@ -1665,6 +1665,10 @@ PAL_InterpretInstruction(
       //
       // Play sound effect
       //
+	  //停播配音……
+	  AUDIO_PlayDub(-1, 0, 0);
+	  AUDIO_DubStart();
+	  
       AUDIO_PlaySound(pScript->rgwOperand[0]);
       break;
 
@@ -3317,7 +3321,12 @@ PAL_RunTriggerScript(
          //
          if (gConfig.pszMsgFile)
          {
-            int idx = 0, iMsg;
+            int idx = 0, iMsg, dubSubIdx = 0;
+			int isPlayingDub = 0;
+			//
+			//
+			//如果有配音……
+			
             while ((iMsg = PAL_GetMsgNum(pScript->rgwOperand[0], idx++)) >= 0)
 			{
                if (iMsg == 0)
@@ -3328,9 +3337,31 @@ PAL_RunTriggerScript(
                   PAL_ClearDialog(TRUE);
                   VIDEO_RestoreScreen(gpScreen);
                   VIDEO_UpdateScreen(NULL);
+				  //有一个换屏，配音子序号增加。
+			      dubSubIdx++;
+				  isPlayingDub = 0;
                }
-			   else
-                  PAL_ShowDialogText(PAL_GetMsg(iMsg));
+			   else{
+				   //这里加入配音播放。
+			       //
+				   	  if (!isPlayingDub)
+					  {
+						UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] DubNum %.5d DubSubNum %.2d\n", pScript->rgwOperand[0], dubSubIdx);
+						AUDIO_PlayDub(pScript->rgwOperand[0], dubSubIdx, 0);
+						AUDIO_DubStart();
+						//设定配音编号，运行AUDIO_DubStart播放配音。
+						isPlayingDub = 1;
+					  }
+					  if (g_TextLib.nCurrentDialogLine > 3)
+					  {
+						//有一个自动换屏，配音子序号增加。
+			            dubSubIdx++;
+						UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] DubNum %.5d DubSubNum %.2d\n", pScript->rgwOperand[0], dubSubIdx);
+						AUDIO_PlayDub(pScript->rgwOperand[0], dubSubIdx, 0);
+						//先设定配音编号，之后在PAL_ShowDialogText函数里，用户按键清屏后运行AUDIO_DubStart播放配音。
+					  }
+                    PAL_ShowDialogText(PAL_GetMsg(iMsg));
+				    }
             }
             if( gpGlobals->g.lprgScriptEntry[wScriptEntry+1].wOperation == 0xFFFF && gpGlobals->g.lprgScriptEntry[wScriptEntry+1].rgwOperand[0] != pScript->rgwOperand[0] + 1)
 			   wScriptEntry++;

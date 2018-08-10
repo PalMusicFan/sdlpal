@@ -39,6 +39,8 @@ typedef struct tagAUDIODEVICE
 {
    SDL_AudioSpec             spec;		/* Actual-used sound specification */
    AUDIOPLAYER              *pMusPlayer;
+   //配音播放器……
+   AUDIOPLAYER              *pDubPlayer;
    AUDIOPLAYER              *pCDPlayer;
 #if PAL_HAS_SDLCD
    SDL_CD                   *pCD;
@@ -158,7 +160,9 @@ AUDIO_FillBuffer(
 	   memset(gAudioDevice.pSoundBuffer, 0, len);
 
 	   gAudioDevice.pSoundPlayer->FillBuffer(gAudioDevice.pSoundPlayer, gAudioDevice.pSoundBuffer, len);
-
+   		//配音播放器……
+		gAudioDevice.pDubPlayer->FillBuffer(gAudioDevice.pDubPlayer, gAudioDevice.pSoundBuffer, len);
+	   //
 	   //
 	   // Adjust volume for sound
 	   //
@@ -272,7 +276,8 @@ AUDIO_OpenDevice(
    // Initialize the sound subsystem.
    //
    gAudioDevice.pSoundPlayer = SOUND_Init();
-
+	//配音播放器……
+	gAudioDevice.pDubPlayer = MP3_Init();
    //
    // Initialize the music subsystem.
    //
@@ -375,7 +380,12 @@ AUDIO_CloseDevice(
 	   gAudioDevice.pMusPlayer->Shutdown(gAudioDevice.pMusPlayer);
 	   gAudioDevice.pMusPlayer = NULL;
    }
-
+   //配音播放器……
+   if (gAudioDevice.pDubPlayer)
+   {
+	   gAudioDevice.pDubPlayer->Shutdown(gAudioDevice.pDubPlayer);
+	   gAudioDevice.pDubPlayer = NULL;
+   }
    if (gAudioDevice.pCDPlayer)
    {
 	   gAudioDevice.pCDPlayer->Shutdown(gAudioDevice.pCDPlayer);
@@ -532,6 +542,38 @@ AUDIO_PlayMusic(
    if (gAudioDevice.pMusPlayer)
    {
       gAudioDevice.pMusPlayer->Play(gAudioDevice.pMusPlayer, iNumRIX, fLoop, flFadeTime);
+   }
+   AUDIO_Unlock();
+}
+//配音播放器……
+VOID
+AUDIO_PlayDub(
+   INT       iNumDub,
+   INT       iNumSubDub,
+   FLOAT     flFadeTime
+)
+{
+
+
+   AUDIO_Lock();
+   if (gAudioDevice.pDubPlayer)
+   {
+      gAudioDevice.pDubPlayer->DubPlay(gAudioDevice.pDubPlayer, iNumDub, iNumSubDub, flFadeTime);
+   }
+   AUDIO_Unlock();
+}
+
+VOID
+AUDIO_DubStart(
+   VOID
+)
+{
+
+
+   AUDIO_Lock();
+   if (gAudioDevice.pDubPlayer)
+   {
+      gAudioDevice.pDubPlayer->DubStart(gAudioDevice.pDubPlayer);
    }
    AUDIO_Unlock();
 }

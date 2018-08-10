@@ -58,7 +58,17 @@ AUDIO_PlayMusic(
    BOOL      fLoop,
    FLOAT     flFadeTime
 );
-
+//配音……
+VOID
+AUDIO_PlayDub(
+   INT       iNumDub,
+   INT       iNumSubDub,
+   FLOAT     flFadeTime
+);
+VOID
+AUDIO_DubStart(
+   VOID
+);
 BOOL
 AUDIO_PlayCDTrack(
    INT    iNumTrack

@@ -37,6 +37,9 @@ typedef struct tagMP3PLAYER
 	mad_data           *pMP3;
 	INT                 iMusic;
 	BOOL                fLoop;
+	//配音……
+	INT                 dubNum;
+	INT                 dubSubNum;
 } MP3PLAYER, *LPMP3PLAYER;
 
 static VOID MP3_Close(
@@ -132,6 +135,113 @@ MP3_Play(
 		return TRUE;
 	}
 }
+//配音……
+static BOOL
+Dub_Play(
+	VOID       *object,
+	INT         iNum,
+	INT         iNumSub,
+	FLOAT       flFadeTime
+	)
+{
+	LPMP3PLAYER player = (LPMP3PLAYER)object;
+
+	//
+	// Check for NULL pointer.
+	//
+	//if (player == NULL)
+	//{
+		//return FALSE;
+	//}
+
+	//player->fLoop = fLoop;
+
+	//if (iNum == player->iMusic)
+	//{
+	//	return TRUE;
+	//}
+
+	//MP3_Close(player);
+
+	player->dubNum = iNum;
+	player->dubSubNum = iNumSub;
+	return TRUE;
+/*	if (access(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "dub/%.5d_%.2d.mp3", iNum, iNumSub)), 0) >= 0)
+	{
+		MP3_Close(player);
+		player->pMP3 = mad_openFile(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "dub/%.5d_%.2d.mp3", iNum, iNumSub)), AUDIO_GetDeviceSpec(), gConfig.iResampleQuality);
+
+		if (player->pMP3)
+		{
+			mad_start(player->pMP3);
+			return TRUE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+	else
+	{
+		return TRUE;
+	}
+*/
+}
+
+static BOOL
+Dub_Start(
+	VOID       *object
+	)
+{
+	LPMP3PLAYER player = (LPMP3PLAYER)object;
+
+	//
+	// Check for NULL pointer.
+	//
+	if (player == NULL)
+	{
+		return FALSE;
+	}
+
+	//player->fLoop = fLoop;
+
+	//if (iNum == player->iMusic)
+	//{
+	//	return TRUE;
+	//}
+	
+	///*
+	if (player->dubNum < 0)
+	{
+		MP3_Close(player);
+		return TRUE;
+	}
+	//*/
+
+	//MP3_Close(player);
+
+	player->iMusic = player->dubNum;
+
+	if (access(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "dub/%.5d_%.2d.mp3", player->dubNum, player->dubSubNum)), 0) >= 0)
+	{
+		MP3_Close(player);
+		player->pMP3 = mad_openFile(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "dub/%.5d_%.2d.mp3", player->dubNum, player->dubSubNum)), AUDIO_GetDeviceSpec(), gConfig.iResampleQuality);
+
+		if (player->pMP3)
+		{
+			mad_start(player->pMP3);
+			return TRUE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+	else
+	{
+		return TRUE;
+	}
+}
 
 LPAUDIOPLAYER
 MP3_Init(
@@ -143,8 +253,13 @@ MP3_Init(
 	{
 		player->FillBuffer = MP3_FillBuffer;
 		player->Play = MP3_Play;
+		//配音……
+		player->DubPlay = Dub_Play;
+		player->DubStart = Dub_Start;
+		player->dubNum = 0;
+		player->dubSubNum = 0;
 		player->Shutdown = MP3_Shutdown;
-
+		
 		player->pMP3 = NULL;
 		player->iMusic = -1;
 		player->fLoop = FALSE;

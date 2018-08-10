@@ -27,12 +27,14 @@
 #define PLAYERS_H
 
 #include "common.h"
-
+//配音……
 typedef struct tagAUDIOPLAYER
 {
 #define AUDIOPLAYER_COMMONS \
 	VOID (*Shutdown)(VOID*); \
 	BOOL (*Play)(VOID*, INT, BOOL, FLOAT); \
+	BOOL (*DubPlay)(VOID*, INT, INT, FLOAT); \
+	BOOL (*DubStart)(VOID*); \
 	VOID (*FillBuffer)(VOID*, LPBYTE, INT)
 
 	AUDIOPLAYER_COMMONS;

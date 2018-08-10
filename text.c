@@ -1520,6 +1520,10 @@ PAL_ShowDialogText(
       g_TextLib.nCurrentDialogLine = 0;
       VIDEO_RestoreScreen(gpScreen);
       VIDEO_UpdateScreen(NULL);
+	  
+	  //配音……
+	  AUDIO_DubStart();
+   
    }
 
    x = PAL_X(g_TextLib.posDialogText);
