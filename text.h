@@ -134,7 +134,7 @@ PAL_StartDialogWithOffset(
    INT          yOff
 );
 
-VOID
+int
 PAL_ShowDialogText(
    LPCWSTR    lpszText
 );

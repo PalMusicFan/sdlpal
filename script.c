@@ -3318,6 +3318,7 @@ PAL_RunTriggerScript(
          if (gConfig.pszMsgFile)
          {
             int idx = 0, iMsg;
+			int showDialogTextValue = 0; // 0 means normal message while 1 means name of character.
             while ((iMsg = PAL_GetMsgNum(pScript->rgwOperand[0], idx++)) >= 0)
 			{
                if (iMsg == 0)
@@ -3330,9 +3331,10 @@ PAL_RunTriggerScript(
                   VIDEO_UpdateScreen(NULL);
                }
 			   else
-                  PAL_ShowDialogText(PAL_GetMsg(iMsg));
+                  showDialogTextValue = PAL_ShowDialogText(PAL_GetMsg(iMsg));
             }
-            if( gpGlobals->g.lprgScriptEntry[wScriptEntry+1].wOperation == 0xFFFF && gpGlobals->g.lprgScriptEntry[wScriptEntry+1].rgwOperand[0] != pScript->rgwOperand[0] + 1)
+            if( gpGlobals->g.lprgScriptEntry[wScriptEntry+1].wOperation == 0xFFFF && gpGlobals->g.lprgScriptEntry[wScriptEntry+1].rgwOperand[0] != pScript->rgwOperand[0] + 1
+			    || (gpGlobals->g.lprgScriptEntry[wScriptEntry+1].wOperation == 0xFFFF && showDialogTextValue == 1) )
 			   wScriptEntry++;
             else
             while (gpGlobals->g.lprgScriptEntry[wScriptEntry].wOperation == 0xFFFF

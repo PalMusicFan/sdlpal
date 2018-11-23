@@ -1477,7 +1477,7 @@ TEXT_DisplayText(
    return x;
 }
 
-VOID
+int
 PAL_ShowDialogText(
    LPCWSTR      lpszText
 )
@@ -1492,7 +1492,9 @@ PAL_ShowDialogText(
 
   Return value:
 
-    None.
+    0 = normal text. 
+	1 = name of character. 
+	
 
 --*/
 {
@@ -1588,6 +1590,7 @@ PAL_ShowDialogText(
          // name of character
          //
          PAL_DrawText(lpszText, g_TextLib.posDialogTitle, FONT_COLOR_CYAN_ALT, TRUE, TRUE, FALSE);
+		 return 1;
       }
       else
       {
