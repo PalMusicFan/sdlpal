@@ -165,6 +165,7 @@ PAL_ReadMessageFile(
 		struct _msg_list_entry *next;
 		struct _msg_entry *value;
 		int index;
+		int indexEnd;
 		int count;
 	} *head = NULL, *item = NULL;
 	struct _word_list_entry
@@ -215,7 +216,7 @@ PAL_ReadMessageFile(
 							head = (struct _msg_list_entry *)UTIL_malloc(sizeof(struct _msg_list_entry));
 							item = head;
 						}
-						item->value = NULL; item->index = sid;
+						item->value = NULL; item->index = sid; item->indexEnd = sid;
 						item->count = 0; item->next = NULL; cur_val = NULL;
 						if (idx_cnt < item->index) idx_cnt = item->index;
 					}
@@ -260,6 +261,7 @@ PAL_ReadMessageFile(
 				{
 					// End dialog
 					state = ST_OUTSIDE;
+					item->indexEnd = eid;
 				}
 				else
 				{
@@ -554,27 +556,44 @@ PAL_ReadMessageFile(
 		int idx_msg = 1;
 		g_TextLib.nIndices = (idx_cnt += 1);
 		g_TextLib.nMsgs = (msg_cnt += 1);
-		g_TextLib.lpIndexBuf = (int **)UTIL_calloc(idx_cnt, sizeof(int *));
+		g_TextLib.lpIndexBuf = (int ***)UTIL_calloc(idx_cnt, sizeof(int *));
 		g_TextLib.lpMsgBuf = (LPWSTR *)UTIL_calloc(msg_cnt, sizeof(LPWSTR));
+		g_TextLib.indexMaxCounter = (int *)UTIL_calloc(idx_cnt, sizeof(int *));
+		//indexMaxCounter这里记录了lpIndexBuf中相应index项目包含的下一级数组（索引item->indexEnd和item->index的差值）的长度。
 		for (item = head; item; )
 		{
 			struct _msg_list_entry *temp = item->next;
 			struct _msg_entry *msg = item->value;
 			int index = 0;
-			g_TextLib.lpIndexBuf[item->index] = (int *)UTIL_calloc(item->count + 1, sizeof(int));
+			if (g_TextLib.lpIndexBuf[item->index])
+			{
+				//如果这个开头索引的MESSAGE已经出现过了
+				if ((item->indexEnd - item->indexEnd + 1) > g_TextLib.indexMaxCounter[item->index])
+					//判断是否需要扩展下级数组空间。
+				{
+					g_TextLib.lpIndexBuf[item->index] = (int **)realloc(g_TextLib.lpIndexBuf[item->index], sizeof(int *) * (item->indexEnd - item->indexEnd + 1));
+					g_TextLib.indexMaxCounter[item->index] = item->indexEnd - item->indexEnd + 1;
+					//为indexMaxCounter的对应数据做更新
+				}
+			}else{
+				//第一次出现的开头索引，直接申请空间。
+				g_TextLib.lpIndexBuf[item->index] = (int *)UTIL_calloc((item->indexEnd - item->index + 1), sizeof(int *));
+				g_TextLib.indexMaxCounter[item->index] = item->indexEnd - item->indexEnd + 1;
+			}
+			g_TextLib.lpIndexBuf[item->index][item->indexEnd - item->index] = (int *)UTIL_calloc((item->count + 1), sizeof(int));
 			while (msg)
 			{
 				struct _msg_entry *tmp = msg->next;
 				if (msg->value)
 				{
-					g_TextLib.lpIndexBuf[item->index][index++] = idx_msg;
+					g_TextLib.lpIndexBuf[item->index][item->indexEnd - item->index][index++] = idx_msg;
 					g_TextLib.lpMsgBuf[idx_msg++] = msg->value;
 				}
 				else
-					g_TextLib.lpIndexBuf[item->index][index++] = 0;
+					g_TextLib.lpIndexBuf[item->index][item->indexEnd - item->index][index++] = 0;
 				free(msg); msg = tmp;
 			}
-			g_TextLib.lpIndexBuf[item->index][item->count] = -1;
+			g_TextLib.lpIndexBuf[item->index][item->indexEnd - item->index][item->count] = -1;
 			free(item); item = temp;
 		}
 	}
@@ -876,6 +895,7 @@ PAL_FreeText(
 --*/
 {
    int i;
+   int j;
    if (g_TextLib.lpMsgBuf != NULL)
    {
       if (gConfig.pszMsgFile)
@@ -897,10 +917,19 @@ PAL_FreeText(
    if (g_TextLib.lpIndexBuf != NULL)
    {
       if (gConfig.pszMsgFile)
-         for(i = 0; i < g_TextLib.nIndices; i++) free(g_TextLib.lpIndexBuf[i]);
-      else
+	  {
+         for(i = 0; i < g_TextLib.nIndices; i++){
+			for(j = 0; j < g_TextLib.indexMaxCounter[i]; j++){
+				free(g_TextLib.lpIndexBuf[i][j]);
+			}
+			free(g_TextLib.lpIndexBuf[i]);
+		 }
+      }else{
          free(g_TextLib.lpIndexBuf[0]);
+	  }
       free(g_TextLib.lpIndexBuf);
+      free(g_TextLib.indexMaxCounter);
+	  
       g_TextLib.lpIndexBuf = NULL;
    }
 }
@@ -952,6 +981,7 @@ PAL_GetMsg(
 int
 PAL_GetMsgNum(
    int        iIndex,
+   int        iLen,
    int        iOrder
 )
 /*++
@@ -970,7 +1000,7 @@ PAL_GetMsgNum(
 
 --*/
 {
-   return (iIndex >= g_TextLib.nMsgs || !g_TextLib.lpIndexBuf[iIndex]) ? -1 : g_TextLib.lpIndexBuf[iIndex][iOrder];
+   return (iIndex >= g_TextLib.nMsgs || !g_TextLib.lpIndexBuf[iIndex]) ? -1 : g_TextLib.lpIndexBuf[iIndex][iLen][iOrder];
 }
 
 VOID

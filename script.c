@@ -3325,8 +3325,27 @@ PAL_RunTriggerScript(
          //
          if (gConfig.pszMsgFile)
          {
+			 //找到本段MESSAGE结尾索引……
+			 int tmp_wScriptEntry = wScriptEntry, msgLen = 0; //为找到eid设立临时脚本地址
+			 if( gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry+1].wOperation == 0xFFFF && gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry+1].rgwOperand[0] != gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry].rgwOperand[0] + 1)
+				 //如果下条脚本还是FFFF但索引不连续递增，就在这里中断本段MESSAGE。tmp_wScriptEntry的文字索引是eid。
+			 {
+				 tmp_wScriptEntry++;
+             }else{
+				
+                 while (gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry].wOperation == 0xFFFF
+                        || gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry].wOperation == 0x008E)
+                 {
+                    //
+                    // Skip all following continuous 0xFFFF & 0x008E instructions
+                    //
+                    tmp_wScriptEntry++;
+                 }
+			 }
+			 msgLen = gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry-1].rgwOperand[0] - gpGlobals->g.lprgScriptEntry[wScriptEntry].rgwOperand[0];
+			 //结尾索引位于tmp_wScriptEntry当前位置的上一条。
             int idx = 0, iMsg;
-            while ((iMsg = PAL_GetMsgNum(pScript->rgwOperand[0], idx++)) >= 0)
+            while ((iMsg = PAL_GetMsgNum(pScript->rgwOperand[0], msgLen, idx++)) >= 0)
 			{
                if (iMsg == 0)
                {
@@ -3503,8 +3522,28 @@ begin:
 
 		   if (gConfig.pszMsgFile)
 		   {
+			   //找到本段MESSAGE结尾索引……
+			   int tmp_wScriptEntry = wScriptEntry, msgLen = 0; //为找到eid设立临时脚本地址
+			   if( gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry+1].wOperation == 0xFFFF && gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry+1].rgwOperand[0] != gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry].rgwOperand[0] + 1)
+			   {
+				   tmp_wScriptEntry++;
+               }else{
+				
+                   while (gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry].wOperation == 0xFFFF
+                        || gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry].wOperation == 0x008E)
+                   {
+                      //
+                      // Skip all following continuous 0xFFFF & 0x008E instructions
+                      //
+                      tmp_wScriptEntry++;
+                   }
+			   }
+			   msgLen = gpGlobals->g.lprgScriptEntry[tmp_wScriptEntry-1].rgwOperand[0] - gpGlobals->g.lprgScriptEntry[wScriptEntry].rgwOperand[0];
+			 //结尾索引位于tmp_wScriptEntry当前位置的上一条。
+
+			   
 			   int idx = 0, iMsg;
-			   while ((iMsg = PAL_GetMsgNum(pScript->rgwOperand[0], idx++)) >= 0)
+			   while ((iMsg = PAL_GetMsgNum(pScript->rgwOperand[0], msgLen, idx++)) >= 0)
 			   {
 				   if (iMsg > 0)
 				   {
