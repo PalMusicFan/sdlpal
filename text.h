@@ -48,7 +48,11 @@ typedef struct tagTEXTLIB
 {
     LPWSTR         *lpWordBuf;
     LPWSTR         *lpMsgBuf;
-    int           **lpIndexBuf;
+    int           ***lpIndexBuf; 
+	
+	int            *indexMaxCounter;
+	//这里记录了lpIndexBuf中相应index项目包含的下一级数组（索引item->indexEnd和item->index的差值）的长度。
+		
     BOOL            fUseISOFont;
 	int             iFontFlavor;
 
@@ -98,6 +102,7 @@ PAL_GetMsg(
 int
 PAL_GetMsgNum(
    int        iIndex,
+   int        iIndexEnd,
    int        iOrder
 );
 
