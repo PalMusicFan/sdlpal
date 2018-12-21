@@ -556,7 +556,7 @@ PAL_ReadMessageFile(
 		int idx_msg = 1;
 		g_TextLib.nIndices = (idx_cnt += 1);
 		g_TextLib.nMsgs = (msg_cnt += 1);
-		g_TextLib.lpIndexBuf = (int ***)UTIL_calloc(idx_cnt, sizeof(int *));
+		g_TextLib.lpIndexBuf = (int ***)UTIL_calloc(idx_cnt, sizeof(int **));
 		g_TextLib.lpMsgBuf = (LPWSTR *)UTIL_calloc(msg_cnt, sizeof(LPWSTR));
 		g_TextLib.indexMaxCounter = (int *)UTIL_calloc(idx_cnt, sizeof(int *));
 		//indexMaxCounter这里记录了lpIndexBuf中相应index项目包含的下一级数组（索引item->indexEnd和item->index的差值）的长度。
@@ -568,17 +568,17 @@ PAL_ReadMessageFile(
 			if (g_TextLib.lpIndexBuf[item->index])
 			{
 				//如果这个开头索引的MESSAGE已经出现过了
-				if ((item->indexEnd - item->indexEnd + 1) > g_TextLib.indexMaxCounter[item->index])
+				if ((item->indexEnd - item->index + 1) > g_TextLib.indexMaxCounter[item->index])
 					//判断是否需要扩展下级数组空间。
 				{
-					g_TextLib.lpIndexBuf[item->index] = (int **)realloc(g_TextLib.lpIndexBuf[item->index], sizeof(int *) * (item->indexEnd - item->indexEnd + 1));
-					g_TextLib.indexMaxCounter[item->index] = item->indexEnd - item->indexEnd + 1;
+					g_TextLib.lpIndexBuf[item->index] = (int **)realloc(g_TextLib.lpIndexBuf[item->index], sizeof(int *) * (item->indexEnd - item->index + 1));
+					g_TextLib.indexMaxCounter[item->index] = item->indexEnd - item->index + 1;
 					//为indexMaxCounter的对应数据做更新
 				}
 			}else{
 				//第一次出现的开头索引，直接申请空间。
-				g_TextLib.lpIndexBuf[item->index] = (int *)UTIL_calloc((item->indexEnd - item->index + 1), sizeof(int *));
-				g_TextLib.indexMaxCounter[item->index] = item->indexEnd - item->indexEnd + 1;
+				g_TextLib.lpIndexBuf[item->index] = (int **)UTIL_calloc((item->indexEnd - item->index + 1), sizeof(int *));
+				g_TextLib.indexMaxCounter[item->index] = item->indexEnd - item->index + 1;
 			}
 			g_TextLib.lpIndexBuf[item->index][item->indexEnd - item->index] = (int *)UTIL_calloc((item->count + 1), sizeof(int));
 			while (msg)
