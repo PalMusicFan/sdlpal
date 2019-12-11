@@ -1,6 +1,7 @@
 TARGET = sdlpal
 
-SOURCES  = . .. ../adplug
+SOURCES  = . .. ../adplug \
+../liboggvorbis/src ../liboggvorbis/src/modes ../liboggvorbis/src/books/coupled ../liboggvorbis/src/books/floor ../liboggvorbis/src/books/uncoupled
 CFILES   = $(foreach dir, $(SOURCES), $(wildcard $(dir)/*.c))
 CPPFILES = $(foreach dir, $(SOURCES), $(wildcard $(dir)/*.cpp))
 
@@ -9,13 +10,16 @@ OBJS = $(CFILES:.c=$(INTER).o) $(CPPFILES:.cpp=$(INTER).o)
 PSPSDK = $(shell psp-config --pspsdk-path)
 
 INCDIR = 
-CFLAGS = -O3 -G0 -Wall -g -I/usr/local/pspdev/psp/include/SDL -DPSP=1 -std=gnu99 -D_GNU_SOURCE
+CFLAGS = -O3 -G0 -Wall -g -I/usr/local/pspdev/psp/include/SDL \
+-I../liboggvorbis/include -I../liboggvorbis/src -I../liboggvorbis/src/modes \
+-I../liboggvorbis/src/books/coupled -I../liboggvorbis/src/books/floor -I../liboggvorbis/src/books/uncoupled \
+ -DPSP=1 -std=gnu99 -D_GNU_SOURCE
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -std=c++11 -I. -I../
 ASFLAGS = $(CFLAGS)
 
 LIBDIR =
 LIBS = -L/usr/local/pspdev/psp/lib -lSDL -lm -lGL -lpspvfpu -L/usr/local/pspdev/psp/sdk/lib \
--lpspdebug -lpspgu -lpspctrl -lpspge -lpspdisplay -lpsphprm -lpspsdk -lpsprtc -lpspaudio -lc \
+-lpspdebug -lpspgu -lpspctrl -lpspge -lpspdisplay -lpsphprm -lpspsdk -lpsprtc -lpspaudio -lpspmp3 -lc \
 -lpspuser -lpsputility -lpspkernel -lpspnet_inet -lpspirkeyb -lpsppower \
  -lstdc++
 

@@ -27,6 +27,138 @@
 #include "players.h"
 
 #if PAL_HAS_MP3
+
+#ifdef PSP
+
+#include "psp/native_mp3.h"
+
+typedef struct tagMP3PLAYER
+{
+	AUDIOPLAYER_COMMONS;
+
+	INT pMP3;
+} MP3PLAYER, *LPMP3PLAYER;
+
+static VOID MP3_Close(
+	LPMP3PLAYER player
+)
+{
+	if (player->pMP3)
+	{
+		stopNativeMP3();
+		player->pMP3 = NULL;
+	}
+}
+
+static BOOL
+MP3_Play(
+	VOID* object,
+	INT         iNum,
+	BOOL        fLoop,
+	FLOAT       flFadeTime
+)
+{
+	LPMP3PLAYER player = (LPMP3PLAYER)object;
+
+	int intfLoop = 1;
+
+	//
+	// Check for NULL pointer.
+	//
+	if (player == NULL)
+	{
+		return FALSE;
+	}
+
+	player->fLoop = fLoop;
+	if (fLoop == TRUE)
+	{
+		intfLoop = 1;
+	}else
+	{
+		intfLoop = 0;
+	}
+
+	if (iNum == player->iMusic)
+	{
+		return TRUE;
+	}
+
+	MP3_Close(player);
+
+	clearFileNameCache();
+
+	player->iMusic = iNum;
+
+	if (iNum > 0)
+	{
+		player->pMP3 = playNativeMP3(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "mp3%s%.2d.mp3", PAL_NATIVE_PATH_SEPARATOR, iNum)), intfLoop, gConfig.iMusicVolume);
+
+		if (player->pMP3)
+		{
+			return TRUE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+	else
+	{
+		return TRUE;
+	}
+}
+
+static VOID
+MP3_Shutdown(
+	VOID* object
+)
+{
+	if (object)
+	{
+		shutdownNativeMP3();
+		MP3_Close((LPMP3PLAYER)object);
+		free(object);
+	}
+}
+
+static VOID
+MP3_FillBuffer(
+	VOID* object,
+	LPBYTE      stream,
+	INT         len
+)
+{
+	LPMP3PLAYER player = (LPMP3PLAYER)object;
+	if (player->pMP3) {
+		return 0;
+	}
+}
+
+LPAUDIOPLAYER
+MP3_Init(
+	VOID
+)
+{
+	LPMP3PLAYER player;
+	if ((player = (LPMP3PLAYER)malloc(sizeof(MP3PLAYER))) != NULL)
+	{
+		player->FillBuffer = MP3_FillBuffer;
+		player->Play = MP3_Play;
+		player->Shutdown = MP3_Shutdown;
+
+		player->pMP3 = NULL;
+		player->iMusic = -1;
+		player->fLoop = FALSE;
+	}
+
+	initNativeMP3();
+
+	return (LPAUDIOPLAYER)player;
+}
+
+#else
+
 #include "libmad/music_mad.h"
 #include "resampler.h"
 
@@ -117,7 +249,6 @@ MP3_Play(
 
 		if (player->pMP3)
 		{
-			mad_start(player->pMP3);
 			return TRUE;
 		}
 		else
@@ -149,6 +280,7 @@ MP3_Init(
 	}
 	return (LPAUDIOPLAYER)player;
 }
+#endif
 
 #else
 

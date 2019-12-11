@@ -9,8 +9,13 @@
 #include <pspsdk.h>
 #include <psppower.h>
 #include <pspthreadman.h>
+#include <pspmp3.h>
+#include <pspaudio.h>
+#include <psputility.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "native_mp3.h"
 
 PSP_MODULE_INFO("SDLPAL", PSP_MODULE_USER, VERS, REVS);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
@@ -18,8 +23,8 @@ PSP_HEAP_SIZE_MAX();
 
 static SceCtrlData pad;
 static SDL_sem *pad_sem = 0;
-static SDL_Thread *bthread = 0;
-static int running = 0;
+// static SDL_Thread *bthread = 0;
+// static int running = 0;
 static unsigned int old_button = 0;
 static unsigned char old_x = 0, old_y = 0;
 
@@ -57,8 +62,8 @@ int PSP_resume_callback(int unknown, int pwrflags, void* common)
 		gpGlobals->f.fpDATA = UTIL_OpenRequiredFile("data.mkf");
 		fclose(gpGlobals->f.fpF);
 		gpGlobals->f.fpF = UTIL_OpenRequiredFile("f.mkf");
-		fclose(gpGlobals->f.fpFIRE);
-		gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+		//fclose(gpGlobals->f.fpFIRE);
+		//gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
 		fclose(gpGlobals->f.fpRGM);
 		gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
 		fclose(gpGlobals->f.fpSSS);
@@ -108,6 +113,7 @@ int PSP_switch_frequency(int freq)
 			scePowerSetClockFrequency(300, 300, 150);
 		}
 	}
+	return 0;
 }
 
 void PAL_calc_Axes(
@@ -251,6 +257,8 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 		}
 		if (button & PSP_CTRL_START)
 		{
+			// MP3 ioread error handling tester. 
+            // ioread_err = 1;
 			return 1;
 		}
 		if (button & PSP_CTRL_SELECT)
@@ -272,6 +280,7 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 		g_InputState.dir = kDirUnknown;
 		return 1;
 	}
+	return 1;
 }
 
 
@@ -296,6 +305,24 @@ UTIL_Platform_Init(
 	// set PSP CPU clock
 	//
 	scePowerSetClockFrequency(333, 333, 166);
+
+	// Load modules
+	sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC);
+	/*
+	if (status < 0)
+	{
+		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC) returned 0x%08X\n", status);
+	}
+	*/
+	sceUtilityLoadModule(PSP_MODULE_AV_MP3);
+	
+	/*
+	if (status < 0)
+	{
+		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_MP3) returned 0x%08X\n", status);
+	}
+	*/
+	return 0;
 }
 
 INT
@@ -304,6 +331,7 @@ UTIL_Platform_Startup(
 	char* argv[]
 )
 {
+	return 0;
 }
 
 VOID
@@ -311,4 +339,5 @@ UTIL_Platform_Quit(
 	VOID
 )
 {
+	return;
 }

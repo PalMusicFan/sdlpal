@@ -136,7 +136,7 @@
 #elif defined(__arm__)
 #  define FPM_DEFAULT 1
 #elif defined(__mips__)
-#  define FPM_MIPS    1
+#  define FPM_DEFAULT 1
 #elif defined(__sparc__)
 #  define FPM_SPARC   1
 #elif defined(__ppc__)
