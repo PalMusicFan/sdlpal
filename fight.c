@@ -2419,6 +2419,10 @@ PAL_BattleShowPlayerDefMagicAnim(
    iMagicNum = gpGlobals->g.rgObject[wObjectID].magic.wMagicNumber;
    iEffectNum = gpGlobals->g.lprgMagic[iMagicNum].wEffect;
 
+#ifdef PSP
+   gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+#endif
+
    l = PAL_MKFGetDecompressedSize(iEffectNum, gpGlobals->f.fpFIRE);
    if (l <= 0)
    {
@@ -2428,6 +2432,10 @@ PAL_BattleShowPlayerDefMagicAnim(
    lpSpriteEffect = (LPSPRITE)UTIL_malloc(l);
 
    PAL_MKFDecompressChunk((LPBYTE)lpSpriteEffect, l, iEffectNum, gpGlobals->f.fpFIRE);
+
+#ifdef PSP
+   fclose(gpGlobals->f.fpFIRE);
+#endif
 
    n = PAL_SpriteGetNumFrames(lpSpriteEffect);
 
@@ -2585,6 +2593,10 @@ PAL_BattleShowPlayerOffMagicAnim(
    iMagicNum = gpGlobals->g.rgObject[wObjectID].magic.wMagicNumber;
    iEffectNum = gpGlobals->g.lprgMagic[iMagicNum].wEffect;
 
+#ifdef PSP
+   gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+#endif
+
    l = PAL_MKFGetDecompressedSize(iEffectNum, gpGlobals->f.fpFIRE);
    if (l <= 0)
    {
@@ -2594,6 +2606,10 @@ PAL_BattleShowPlayerOffMagicAnim(
    lpSpriteEffect = (LPSPRITE)UTIL_malloc(l);
 
    PAL_MKFDecompressChunk((LPBYTE)lpSpriteEffect, l, iEffectNum, gpGlobals->f.fpFIRE);
+
+#ifdef PSP
+   fclose(gpGlobals->f.fpFIRE);
+#endif
 
    n = PAL_SpriteGetNumFrames(lpSpriteEffect);
 
@@ -2801,6 +2817,10 @@ PAL_BattleShowEnemyMagicAnim(
    iMagicNum = gpGlobals->g.rgObject[wObjectID].magic.wMagicNumber;
    iEffectNum = gpGlobals->g.lprgMagic[iMagicNum].wEffect;
 
+#ifdef PSP
+   gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+#endif
+
    l = PAL_MKFGetDecompressedSize(iEffectNum, gpGlobals->f.fpFIRE);
    if (l <= 0)
    {
@@ -2810,6 +2830,10 @@ PAL_BattleShowEnemyMagicAnim(
    lpSpriteEffect = (LPSPRITE)UTIL_malloc(l);
 
    PAL_MKFDecompressChunk((LPBYTE)lpSpriteEffect, l, iEffectNum, gpGlobals->f.fpFIRE);
+
+#ifdef PSP
+   fclose(gpGlobals->f.fpFIRE);
+#endif
 
    n = PAL_SpriteGetNumFrames(lpSpriteEffect);
 

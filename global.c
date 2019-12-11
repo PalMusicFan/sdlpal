@@ -62,6 +62,11 @@ PAL_IsWINVersion(
 	BOOL *pfIsWIN95
 )
 {
+
+#ifdef PSP
+	gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+#endif
+
 	FILE *fps[] = { UTIL_OpenRequiredFile("abc.mkf"), UTIL_OpenRequiredFile("map.mkf"), gpGlobals->f.fpF, gpGlobals->f.fpFBP, gpGlobals->f.fpFIRE, gpGlobals->f.fpMGO };
 	uint8_t *data = NULL;
 	int data_size = 0, dos_score = 0, win_score = 0;
@@ -114,6 +119,10 @@ PAL_IsWINVersion_Exit:
 	free(data);
 	fclose(fps[1]);
 	fclose(fps[0]);
+
+#ifdef PSP
+	fclose(gpGlobals->f.fpFIRE);
+#endif
 
 	return result;
 }
@@ -187,7 +196,9 @@ PAL_InitGlobals(
    gpGlobals->f.fpBALL = UTIL_OpenRequiredFile("ball.mkf");
    gpGlobals->f.fpDATA = UTIL_OpenRequiredFile("data.mkf");
    gpGlobals->f.fpF = UTIL_OpenRequiredFile("f.mkf");
+#ifndef PSP
    gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+#endif
    gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
    gpGlobals->f.fpSSS = UTIL_OpenRequiredFile("sss.mkf");
 
@@ -261,7 +272,9 @@ PAL_FreeGlobals(
    UTIL_CloseFile(gpGlobals->f.fpBALL);
    UTIL_CloseFile(gpGlobals->f.fpDATA);
    UTIL_CloseFile(gpGlobals->f.fpF);
+#ifndef PSP
    UTIL_CloseFile(gpGlobals->f.fpFIRE);
+#endif
    UTIL_CloseFile(gpGlobals->f.fpRGM);
    UTIL_CloseFile(gpGlobals->f.fpSSS);
 
