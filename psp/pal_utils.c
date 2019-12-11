@@ -57,8 +57,8 @@ int PSP_resume_callback(int unknown, int pwrflags, void* common)
 		gpGlobals->f.fpDATA = UTIL_OpenRequiredFile("data.mkf");
 		fclose(gpGlobals->f.fpF);
 		gpGlobals->f.fpF = UTIL_OpenRequiredFile("f.mkf");
-		fclose(gpGlobals->f.fpFIRE);
-		gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
+		//fclose(gpGlobals->f.fpFIRE);
+		//gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
 		fclose(gpGlobals->f.fpRGM);
 		gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
 		fclose(gpGlobals->f.fpSSS);
