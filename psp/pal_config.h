@@ -41,6 +41,10 @@
 # define VERS 2
 # define REVS 0
 
+#ifndef PATH_MAX
+# define PATH_MAX 320
+#endif
+
 # define printf pspDebugScreenPrintf
 #endif
 
