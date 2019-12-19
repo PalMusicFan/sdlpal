@@ -21,60 +21,22 @@
 #include "native_mp3.h"
 
 #include "../util.h"
-
-
-/* Define the module info section
-PSP_MODULE_INFO("Mp3Test", 0, 0, 1);
-PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
-PSP_HEAP_SIZE_KB(-1024);
- */
-
-#define MP3FILE "ms0:/MUSIC/Test.mp3"
-
-/* Define printf, just to make typing easier 
-#define printf  pspDebugScreenPrintf
-*/
+#include "../audio.h"
 
 int handle = -1;
 int status = -1;
 int isrunning = 0;
+int paused = 0;
 
-int isfLoop = 1;
+int isfLoop = -1;
+int volume = PSP_AUDIO_VOLUME_MAX;
 
 int fd = -1;
 int thid = 0;
 
 int channel = -1;
 
-/* Exit callback 
-int exit_callback(int arg1, int arg2, void *common)
-{
-    isrunning = 0;
-
-	return 0;
-}
-
-/* Callback thread
-int CallbackThread(SceSize args, void *argp)
-{
-    int cbid;
-    cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
-    sceKernelRegisterExitCallback(cbid);
-    sceKernelSleepThreadCB();
-
-	return 0;
-}
-
-/* Sets up the callback thread and returns its thread id
-int SetupCallbacks(void)
-{
-    int thid = 0;
-    thid = sceKernelCreateThread("update_thread", CallbackThread, 0x11, 0xFA0, 0, 0);
-    if (thid >= 0)
-	sceKernelStartThread(thid, 0, 0);
-    return thid;
-}
-*/
+char* MP3filename;
 
 // Input and Output buffers
 char	mp3Buf[16*1024]  __attribute__((aligned(64)));
@@ -87,24 +49,14 @@ short	pcmBuf[16*(1152/2)]  __attribute__((aligned(64)));
 // Print out an error message and quit after user input
 void error( char* msg )
 {
-	SceCtrlData pad;
 	pspDebugScreenClear();
 	pspDebugScreenSetXY(0, 0);
 	printf(msg);
-	printf("Press X to quit.\n");
-	while (isrunning)
-	{
-		sceCtrlReadBufferPositive(&pad, 1);
-		if (pad.Buttons & PSP_CTRL_CROSS)
-			break;
-		sceDisplayWaitVblankStart();
-	}
-	sceKernelExitGame();
 }
 
 int fillStreamBuffer( int fd, int handle )
 {
-	char* dst;
+	SceUChar8* dst;
 	int write;
 	int pos;
 	// Get Info on the stream (where to fill to, how much to fill, where to fill from)
@@ -118,6 +70,9 @@ int fillStreamBuffer( int fd, int handle )
 	status = sceIoLseek32( fd, pos, SEEK_SET );
 	if (status<0)
 	{
+		status = sceIoClose(fd);
+		fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
+		status = sceIoLseek32(fd, pos, SEEK_SET);
 		ERRORMSG("ERROR: sceIoLseek32 returned 0x%08X\n", status);
 	}
 	
@@ -125,14 +80,15 @@ int fillStreamBuffer( int fd, int handle )
 	int read = sceIoRead( fd, dst, write );
 	if (read < 0)
 	{
-		UTIL_LogOutput(LOGLEVEL_VERBOSE, "fillStreamBuffer read < 0 \n");
+		status = sceIoClose(fd);
+		fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
+		read = sceIoRead(fd, dst, write);
 		ERRORMSG("ERROR: Could not read from file - 0x%08X\n", read);
 	}
 	
 	if (read==0)
 	{
 		// End of file?
-		UTIL_LogOutput(LOGLEVEL_VERBOSE, "fillStreamBuffer eof? \n");
 		return 0;
 	}
 	
@@ -152,13 +108,12 @@ int MP3DecodeCallbackThread(VOID)
 	int samplingRate = sceMp3GetSamplingRate(handle);
 	int numChannels = sceMp3GetMp3ChannelNum(handle);
 	int lastDecoded = 0;
-	int volume = PSP_AUDIO_VOLUME_MAX;
 	int numPlayed = 0;
-	int paused = 0;
-	int lastButtons = 0;
-	int loop = 0;
 	
 	channel = -1;
+
+	UTIL_LogOutput(LOGLEVEL_VERBOSE, "volume =  %d , PSP_AUDIO_VOLUME_MAX =  %d \n", volume);
+
 	while (isrunning)
 	{
 		/*
@@ -199,7 +154,6 @@ int MP3DecodeCallbackThread(VOID)
 
 				if (!fillStreamBuffer(fd, handle))
 				{
-					UTIL_LogOutput(LOGLEVEL_VERBOSE, "!fillStreamBuffer(fd, handle) \n");
 					numPlayed = 0;
 				}
 			}
@@ -211,13 +165,12 @@ int MP3DecodeCallbackThread(VOID)
 			// Nothing more to decode? Must have reached end of input buffer
 			if (bytesDecoded == 0 || bytesDecoded == 0x80671402)
 			{
-				if (isfLoop == 1) {
-					UTIL_LogOutput(LOGLEVEL_VERBOSE, "isfLoop == 1)\n");
+				if (isfLoop == -1) {
 					paused = 1;
 					sceMp3ResetPlayPosition(handle);
 					numPlayed = 0;
+					paused = 0;
 				}else {
-					UTIL_LogOutput(LOGLEVEL_VERBOSE, "isfLoop == 0)\n");
 					isrunning = 0;
 				}
 			}
@@ -231,50 +184,44 @@ int MP3DecodeCallbackThread(VOID)
 
 					channel = sceAudioSRCChReserve(bytesDecoded / (2 * numChannels), samplingRate, numChannels);
 				}
-				// Output the decoded samples and accumulate the number of played samples to get the playtime
-				numPlayed += sceAudioSRCOutputBlocking(volume, buf);
+				if (AUDIO_MusicEnabled()){
+					// Output the decoded samples and accumulate the number of played samples to get the playtime
+					numPlayed += sceAudioSRCOutputBlocking(volume, buf);
+				}
+				else {
+					numPlayed += sceAudioSRCOutputBlocking(0, buf);
+				}
 			}
 		}
+		sceKernelDelayThread(10000);
 	}
-
+	return 0;
 }
 
 /* main routine */
 int initNativeMP3(VOID)
 {
-	// Load modules
-	int status = sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC);
-	if (status<0)
-	{
-		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC) returned 0x%08X\n", status);
-	}
-	
-	status = sceUtilityLoadModule(PSP_MODULE_AV_MP3);
-	if (status<0)
-	{
-		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_MP3) returned 0x%08X\n", status);
-	}
 
     return 0;
 }
 
-int playNativeMP3(const char* filename, int fLoop)
+int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 {
-	UTIL_LogOutput(LOGLEVEL_VERBOSE, "isfLoop ==  %d \n", fLoop);
-	isfLoop = fLoop;
 	// Open the input file
-	fd = sceIoOpen(filename, PSP_O_RDONLY, 0777);
+	MP3filename = filename;
+
+	fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
 	if (fd < 0)
 	{
-		ERRORMSG("ERROR: Could not open file '%s' - 0x%08X\n", MP3FILE, fd);
-		return -1;
+		//ERRORMSG("ERROR: Could not open file '%s' - 0x%08X\n", MP3filename, fd);
+		return 0;
 	}
 
 	// Init mp3 resources
 	status = sceMp3InitResource();
 	if (status < 0)
 	{
-		ERRORMSG("ERROR: sceMp3InitResource returned 0x%08X\n", status);
+		//ERRORMSG("ERROR: sceMp3InitResource returned 0x%08X\n", status);
 	}
 	// Reserve a mp3 handle for our playback
 	SceMp3InitArg mp3Init;
@@ -292,6 +239,23 @@ int playNativeMP3(const char* filename, int fLoop)
 	{
 		ERRORMSG("ERROR: sceMp3ReserveMp3Handle returned 0x%08X\n", handle);
 	}
+
+	// Loop?
+	if (fLoop == 1)
+	{
+		isfLoop = -1;
+	}
+	else {
+		isfLoop = 0;
+	}
+	status = sceMp3SetLoopNum(handle, isfLoop);
+	if (status < 0)
+	{
+		ERRORMSG("ERROR: sceMp3SetLoopNum returned 0x%08X\n", status);
+	}
+
+	UTIL_LogOutput(LOGLEVEL_VERBOSE, "iMusicVolume =  %d \n", iMusicVolume);
+	volume = PSP_AUDIO_VOLUME_MAX / 100 * iMusicVolume;
 
 	// Fill the stream buffer with some data so that sceMp3Init has something to work with
 	fillStreamBuffer(fd, handle);
@@ -327,7 +291,6 @@ int stopNativeMP3(VOID)
 		sceAudioSRCChRelease();
 
 	status = sceMp3ReleaseMp3Handle(handle);
-	/*
 	if (status < 0)
 	{
 		ERRORMSG("ERROR: sceMp3ReleaseMp3Handle returned 0x%08X\n", status);
@@ -338,12 +301,12 @@ int stopNativeMP3(VOID)
 	{
 		ERRORMSG("ERROR: sceMp3TermResource returned 0x%08X\n", status);
 	}
-	*/
 	status = sceIoClose(fd);
 	if (status < 0)
 	{
 		ERRORMSG("ERROR: sceIoClose returned 0x%08X\n", status);
 	}
+	return 0;
 	
 }
 

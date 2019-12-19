@@ -92,7 +92,7 @@ MP3_Play(
 
 	if (iNum > 0)
 	{
-		player->pMP3 = playNativeMP3(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "mp3%s%.2d.mp3", PAL_NATIVE_PATH_SEPARATOR, iNum)), intfLoop);
+		player->pMP3 = playNativeMP3(UTIL_GetFullPathName(PAL_BUFFER_SIZE_ARGS(0), gConfig.pszGamePath, PAL_va(1, "mp3%s%.2d.mp3", PAL_NATIVE_PATH_SEPARATOR, iNum)), intfLoop, gConfig.iMusicVolume);
 
 		if (player->pMP3)
 		{
@@ -249,7 +249,6 @@ MP3_Play(
 
 		if (player->pMP3)
 		{
-			mad_start(player->pMP3);
 			return TRUE;
 		}
 		else

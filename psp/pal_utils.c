@@ -9,6 +9,9 @@
 #include <pspsdk.h>
 #include <psppower.h>
 #include <pspthreadman.h>
+#include <pspmp3.h>
+#include <pspaudio.h>
+#include <psputility.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -296,6 +299,23 @@ UTIL_Platform_Init(
 	// set PSP CPU clock
 	//
 	scePowerSetClockFrequency(333, 333, 166);
+
+	// Load modules
+	int status = sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC);
+	/*
+	if (status < 0)
+	{
+		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC) returned 0x%08X\n", status);
+	}
+	*/
+	status = sceUtilityLoadModule(PSP_MODULE_AV_MP3);
+	
+	/*
+	if (status < 0)
+	{
+		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_MP3) returned 0x%08X\n", status);
+	}
+	*/
 }
 
 INT
