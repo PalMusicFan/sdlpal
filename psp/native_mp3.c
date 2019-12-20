@@ -31,7 +31,7 @@ int paused = 0;
 int isfLoop = -1;
 int volume = PSP_AUDIO_VOLUME_MAX;
 
-int fd = -1;
+long long fd = -1;
 int thid = 0;
 
 int channel = -1;
@@ -82,6 +82,10 @@ int fillStreamBuffer( int fd, int handle )
 	{
 		status = sceIoClose(fd);
 		fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
+
+		// Seek again. 
+		status = sceIoLseek32(fd, pos, SEEK_SET);
+
 		read = sceIoRead(fd, dst, write);
 		ERRORMSG("ERROR: Could not read from file - 0x%08X\n", read);
 	}
@@ -201,18 +205,24 @@ int MP3DecodeCallbackThread(VOID)
 /* main routine */
 int initNativeMP3(VOID)
 {
-
     return 0;
 }
 
 int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 {
 	// Open the input file
+	// MP3filename is used for reopening. 
 	MP3filename = filename;
 
-	fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
-	if (fd < 0)
+	if (filename) {
+		fd = sceIoOpen(filename, PSP_O_RDONLY, 0777);
+	}else {
+		fd = 0;
+	}
+
+	if (fd <= 0 || fd > 63)
 	{
+		// sceIoOpen returns 0x80010002 if no such file found. 
 		//ERRORMSG("ERROR: Could not open file '%s' - 0x%08X\n", MP3filename, fd);
 		return 0;
 	}
@@ -222,6 +232,7 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 	if (status < 0)
 	{
 		//ERRORMSG("ERROR: sceMp3InitResource returned 0x%08X\n", status);
+		return 0;
 	}
 	// Reserve a mp3 handle for our playback
 	SceMp3InitArg mp3Init;
@@ -274,7 +285,7 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 		return fd;
 	}
 	else {
-		return -1;
+		return 0;
 	}
 
 }
