@@ -31,12 +31,12 @@ int paused = 0;
 int isfLoop = -1;
 int volume = PSP_AUDIO_VOLUME_MAX;
 
-long long fd = -1;
-int thid = 0;
+int fd = -1;
+SceUID thid = 0;
 
 int channel = -1;
 
-char* MP3filename;
+char MP3filename[PAL_MAX_PATH];
 
 // Input and Output buffers
 char	mp3Buf[16*1024]  __attribute__((aligned(64)));
@@ -59,6 +59,7 @@ int fillStreamBuffer( int fd, int handle )
 	SceUChar8* dst;
 	int write;
 	int pos;
+
 	// Get Info on the stream (where to fill to, how much to fill, where to fill from)
 	status = sceMp3GetInfoToAddStreamData( handle, &dst, &write, &pos);
 	if (status<0)
@@ -106,7 +107,7 @@ int fillStreamBuffer( int fd, int handle )
 	return (pos>0);
 }
 
-int MP3DecodeCallbackThread(VOID)
+int MP3DecodeCallbackThread(void)
 {
 	
 	int samplingRate = sceMp3GetSamplingRate(handle);
@@ -199,23 +200,26 @@ int MP3DecodeCallbackThread(VOID)
 		}
 		sceKernelDelayThread(10000);
 	}
-	return 0;
+	return 1;
 }
 
 /* main routine */
-int initNativeMP3(VOID)
+int initNativeMP3(void)
 {
-    return 0;
+    return 1;
 }
 
 int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 {
 	// Open the input file
-	// MP3filename is used for reopening. 
-	MP3filename = filename;
 
-	if (filename) {
-		fd = sceIoOpen(filename, PSP_O_RDONLY, 0777);
+	// Clear the filename cache. 
+	memset(MP3filename, 0, PAL_MAX_PATH);
+	// Cache the filename. 
+	strcpy(MP3filename, filename);
+
+	if (MP3filename) {
+		fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
 	}else {
 		fd = 0;
 	}
@@ -277,7 +281,7 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 		ERRORMSG("ERROR: sceMp3Init returned 0x%08X\n", status);
 	}
 
-	thid = sceKernelCreateThread("update_thread", MP3DecodeCallbackThread, 0x11, 0xFA0, 0, 0);
+	thid = sceKernelCreateThread("update_thread", (SceKernelThreadEntry)MP3DecodeCallbackThread, 0x11, 0xFA0, 0, 0);
 	if (thid > 0)
 	{
 		isrunning = 1;
@@ -290,7 +294,7 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 
 }
 
-int stopNativeMP3(VOID)
+int stopNativeMP3(void)
 {
 	isrunning = 0;
 
@@ -317,12 +321,12 @@ int stopNativeMP3(VOID)
 	{
 		ERRORMSG("ERROR: sceIoClose returned 0x%08X\n", status);
 	}
-	return 0;
+	return 1;
 	
 }
 
 
-int shutdownNativeMP3(VOID)
+int shutdownNativeMP3(void)
 {
-	return 0;
+	return 1;
 }

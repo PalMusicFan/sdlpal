@@ -8,6 +8,6 @@
 #include <psputility.h>
 
 int playNativeMP3(const char* filename, int fLoop, int iMusicVolume);
-int stopNativeMP3(VOID);
-int initNativeMP3(VOID);
-int shutdownNativeMP3(VOID);
+int stopNativeMP3(void);
+int initNativeMP3(void);
+int shutdownNativeMP3(void);
