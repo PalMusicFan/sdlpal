@@ -117,8 +117,6 @@ int MP3DecodeCallbackThread(void)
 	
 	channel = -1;
 
-	UTIL_LogOutput(LOGLEVEL_VERBOSE, "volume =  %d , PSP_AUDIO_VOLUME_MAX =  %d \n", volume);
-
 	while (isrunning)
 	{
 		/*
@@ -213,16 +211,21 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 {
 	// Open the input file
 
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "filename =  %s \n", filename);
+
 	// Clear the filename cache. 
 	memset(MP3filename, 0, PAL_MAX_PATH);
-	// Cache the filename. 
-	strcpy(MP3filename, filename);
 
-	if (MP3filename) {
-		fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
-	}else {
-		fd = 0;
+	if (filename) {
+		// Cache the filename. 
+		strcpy(MP3filename, filename);
 	}
+
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "MP3filename =  %s \n", MP3filename);
+
+	fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
+
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "sceIoOpen returns %x \n", fd);
 
 	if (fd <= 0 || fd > 63)
 	{
