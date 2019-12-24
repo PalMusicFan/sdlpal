@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "native_mp3.h"
+
 PSP_MODULE_INFO("SDLPAL", PSP_MODULE_USER, VERS, REVS);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
 PSP_HEAP_SIZE_MAX();
@@ -111,6 +113,7 @@ int PSP_switch_frequency(int freq)
 			scePowerSetClockFrequency(300, 300, 150);
 		}
 	}
+	return 0;
 }
 
 void PAL_calc_Axes(
@@ -254,6 +257,7 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 		}
 		if (button & PSP_CTRL_START)
 		{
+ioread_err = 1;
 			return 1;
 		}
 		if (button & PSP_CTRL_SELECT)
@@ -275,6 +279,7 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 		g_InputState.dir = kDirUnknown;
 		return 1;
 	}
+	return 0;
 }
 
 
@@ -301,14 +306,14 @@ UTIL_Platform_Init(
 	scePowerSetClockFrequency(333, 333, 166);
 
 	// Load modules
-	int status = sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC);
+	sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC);
 	/*
 	if (status < 0)
 	{
 		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_AVCODEC) returned 0x%08X\n", status);
 	}
 	*/
-	status = sceUtilityLoadModule(PSP_MODULE_AV_MP3);
+	sceUtilityLoadModule(PSP_MODULE_AV_MP3);
 	
 	/*
 	if (status < 0)
@@ -316,6 +321,7 @@ UTIL_Platform_Init(
 		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_MP3) returned 0x%08X\n", status);
 	}
 	*/
+	return 1;
 }
 
 INT
@@ -324,6 +330,7 @@ UTIL_Platform_Startup(
 	char* argv[]
 )
 {
+	return 1;
 }
 
 VOID
@@ -331,4 +338,5 @@ UTIL_Platform_Quit(
 	VOID
 )
 {
+	return;
 }
