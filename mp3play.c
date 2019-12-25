@@ -86,6 +86,8 @@ MP3_Play(
 
 	MP3_Close(player);
 
+	clearFileNameCache();
+
 	player->iMusic = iNum;
 
 	if (iNum > 0)

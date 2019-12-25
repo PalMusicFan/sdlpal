@@ -23,8 +23,8 @@ PSP_HEAP_SIZE_MAX();
 
 static SceCtrlData pad;
 static SDL_sem *pad_sem = 0;
-static SDL_Thread *bthread = 0;
-static int running = 0;
+// static SDL_Thread *bthread = 0;
+// static int running = 0;
 static unsigned int old_button = 0;
 static unsigned char old_x = 0, old_y = 0;
 
@@ -257,7 +257,8 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 		}
 		if (button & PSP_CTRL_START)
 		{
-ioread_err = 1;
+			// MP3 ioread error handling tester. 
+            // ioread_err = 1;
 			return 1;
 		}
 		if (button & PSP_CTRL_SELECT)
@@ -279,7 +280,7 @@ ioread_err = 1;
 		g_InputState.dir = kDirUnknown;
 		return 1;
 	}
-	return 0;
+	return 1;
 }
 
 
@@ -321,7 +322,7 @@ UTIL_Platform_Init(
 		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_MP3) returned 0x%08X\n", status);
 	}
 	*/
-	return 1;
+	return 0;
 }
 
 INT
@@ -330,7 +331,7 @@ UTIL_Platform_Startup(
 	char* argv[]
 )
 {
-	return 1;
+	return 0;
 }
 
 VOID

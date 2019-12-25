@@ -69,6 +69,13 @@ void error( char* msg )
 	printf(msg);
 }
 
+void clearFileNameCache(void)
+{
+	memset(MP3filename, 0, PAL_MAX_PATH);
+	memset(monitor_MP3filename, 0, PAL_MAX_PATH);
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "clearFileNameCache. Now monitor_MP3filename = %s \n", monitor_MP3filename);
+}
+
 int fillStreamBuffer( int fd, int handle )
 {
 	SceUChar8* dst;
@@ -77,14 +84,14 @@ int fillStreamBuffer( int fd, int handle )
 	status = sceMp3GetInfoToAddStreamData( handle, &dst, &iowrite, &pos);
 	if (status<0)
 	{
-		UTIL_LogOutput(LOGLEVEL_INFO, "sceMp3GetInfoToAddStreamData returned =  0x%x \n", status);
+		UTIL_LogOutput(LOGLEVEL_DEBUG, "sceMp3GetInfoToAddStreamData returned =  0x%x \n", status);
 	}
 
 	// Seek file to position requested
 	status = sceIoLseek32( fd, pos, SEEK_SET );
 	if (status > 0x80000000)
 	{
-		UTIL_LogOutput(LOGLEVEL_INFO, "sceIoLseek32 returned =  0x%x \n", status);
+		// UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoLseek32 returned =  0x%x \n", status);
 	}
 	
 	// Read the amount of data
@@ -92,7 +99,7 @@ int fillStreamBuffer( int fd, int handle )
 	if (ioread > 0x80000000)
 	{
 		ioread_err = 1;
-		// UTIL_LogOutput(LOGLEVEL_INFO, "sceIoRead returned =  0x%x \n", status);
+		// UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoRead returned =  0x%x \n", status);
 	}
 	
 	if (ioread == 0)
@@ -105,7 +112,7 @@ int fillStreamBuffer( int fd, int handle )
 	status = sceMp3NotifyAddStreamData( handle, ioread );
 	if (status < 0)
 	{
-		UTIL_LogOutput(LOGLEVEL_INFO, "sceMp3NotifyAddStreamData returned =  0x%x \n", status);
+		UTIL_LogOutput(LOGLEVEL_WARNING, "sceMp3NotifyAddStreamData returned =  0x%x \n", status);
 	}
 	
 	return (pos>0);
@@ -119,17 +126,17 @@ int MP3MonitorCallbackThread(void)
 
 			monitor_lock = 1;
 
-			UTIL_LogOutput(LOGLEVEL_INFO, "ioread_err DETECTED! monitor_lock = %d\n", monitor_lock);
+			UTIL_LogOutput(LOGLEVEL_WARNING, "ioread_err DETECTED! monitor_lock = %d\n", monitor_lock);
 
 			getcwd(cwd_buff, PAL_MAX_PATH);
-			UTIL_LogOutput(LOGLEVEL_INFO, "getcwd returned =  %s \n", cwd_buff);
+			UTIL_LogOutput(LOGLEVEL_DEBUG, "getcwd returned =  %s \n", cwd_buff);
 			sceIoChdir(cwd_buff);
 
 			sceKernelDelayThread(50000);
 
 			stopNativeMP3();
 
-			UTIL_LogOutput(LOGLEVEL_INFO, "stopNativeMP3 \n");
+			UTIL_LogOutput(LOGLEVEL_DEBUG, "stopNativeMP3 \n");
 
 			sceKernelDelayThread(50000);
 
@@ -142,7 +149,7 @@ int MP3MonitorCallbackThread(void)
 
 			playNativeMP3(monitor_MP3filename, current_floop, current_iMusicVolume);
 
-			UTIL_LogOutput(LOGLEVEL_INFO, "playNativeMP3 \n");
+			UTIL_LogOutput(LOGLEVEL_DEBUG, "playNativeMP3 \n");
 
 			monitor_lock = 0;
 		}
@@ -207,7 +214,8 @@ int MP3DecodeCallbackThread(void)
 			}
 			if (bytesDecoded < 0 && bytesDecoded != 0x80671402)
 			{
-				UTIL_LogOutput(LOGLEVEL_INFO, "bytesDecoded =  0x%x \n", bytesDecoded);
+				// UTIL_LogOutput(LOGLEVEL_WARNING, "bytesDecoded =  0x%x \n", bytesDecoded);
+				break;
 			}
 
 			// Nothing more to decode? Must have reached end of input buffer
@@ -265,7 +273,7 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 {
 	// Open the input file
 
-	UTIL_LogOutput(LOGLEVEL_INFO, "filename =  %s \n", filename);
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "filename =  %s \n", filename);
 
 	current_floop = fLoop;
 	current_iMusicVolume = iMusicVolume;
@@ -277,11 +285,11 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 		strcpy(MP3filename, filename);
 	}
 
-	UTIL_LogOutput(LOGLEVEL_INFO, "MP3filename =  %s \n", MP3filename);
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "MP3filename =  %s \n", MP3filename);
 
 	fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
 
-	UTIL_LogOutput(LOGLEVEL_INFO, "sceIoOpen returns 0x%x \n", fd);
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "sceIoOpen returns 0x%x \n", fd);
 
 	if (fd <= 0 || fd > 63)
 	{
@@ -311,7 +319,9 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 	handle = sceMp3ReserveMp3Handle(&mp3Init);
 	if (handle < 0)
 	{
-		ERRORMSG("ERROR: sceMp3ReserveMp3Handle returned 0x%08X\n", handle);
+		// ERRORMSG("ERROR: sceMp3ReserveMp3Handle returned 0x%08X\n", handle);
+		UTIL_LogOutput(LOGLEVEL_WARNING, "sceMp3ReserveMp3Handle returns 0x%x \n", status);
+		return 0;
 	}
 
 	// Loop?
@@ -325,7 +335,8 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 	status = sceMp3SetLoopNum(handle, isfLoop);
 	if (status < 0)
 	{
-		ERRORMSG("ERROR: sceMp3SetLoopNum returned 0x%08X\n", status);
+		// ERRORMSG("ERROR: sceMp3SetLoopNum returned 0x%08X\n", status);
+		UTIL_LogOutput(LOGLEVEL_WARNING, "sceMp3ReserveMp3Handle returns 0x%x \n", handle);
 	}
 
 	UTIL_LogOutput(LOGLEVEL_VERBOSE, "iMusicVolume =  %d \n", iMusicVolume);
@@ -337,7 +348,8 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 	status = sceMp3Init(handle);
 	if (status < 0)
 	{
-		ERRORMSG("ERROR: sceMp3Init returned 0x%08X\n", status);
+		// ERRORMSG("ERROR: sceMp3Init returned 0x%08X\n", status);
+		UTIL_LogOutput(LOGLEVEL_WARNING, "sceMp3Init returns 0x%x \n", status);
 	}
 
 	thid = sceKernelCreateThread("update_thread", (SceKernelThreadEntry)MP3DecodeCallbackThread, 0x11, 0xFA0, 0, 0);
