@@ -84,6 +84,7 @@ int fillStreamBuffer( int fd, int handle )
 	status = sceMp3GetInfoToAddStreamData( handle, &dst, &iowrite, &pos);
 	if (status<0)
 	{
+		sceKernelDelayThread(1000000);
 		UTIL_LogOutput(LOGLEVEL_DEBUG, "sceMp3GetInfoToAddStreamData returned =  0x%x \n", status);
 	}
 
@@ -98,6 +99,7 @@ int fillStreamBuffer( int fd, int handle )
 	ioread = sceIoRead( fd, dst, iowrite );
 	if (ioread > 0x80000000)
 	{
+		sceKernelDelayThread(1000000);
 		ioread_err = 1;
 		// UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoRead returned =  0x%x \n", status);
 	}

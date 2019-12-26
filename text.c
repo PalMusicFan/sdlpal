@@ -1262,6 +1262,9 @@ PAL_StartDialogWithOffset(
    case kDialogUpper:
       if (iNumCharFace > 0)
       {
+#ifdef PSP
+		  gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
+#endif
          //
          // Display the character face at the upper part of the screen
          //
@@ -1295,6 +1298,9 @@ PAL_StartDialogWithOffset(
 
             VIDEO_UpdateScreen(&rect);
          }
+#ifdef PSP
+		 UTIL_CloseFile(gpGlobals->f.fpRGM);
+#endif
       }
       g_TextLib.posDialogTitle = PAL_XY(iNumCharFace > 0 ? 80 : 12, 8);
       g_TextLib.posDialogText = PAL_XY(iNumCharFace > 0 ? 96 : 44, 26);
@@ -1307,6 +1313,9 @@ PAL_StartDialogWithOffset(
    case kDialogLower:
       if (iNumCharFace > 0)
       {
+#ifdef PSP
+		  gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
+#endif
          //
          // Display the character face at the lower part of the screen
          //
@@ -1319,6 +1328,9 @@ PAL_StartDialogWithOffset(
 
             VIDEO_UpdateScreen(NULL);
          }
+#ifdef PSP
+		 UTIL_CloseFile(gpGlobals->f.fpRGM);
+#endif
       }
       g_TextLib.posDialogTitle = PAL_XY(iNumCharFace > 0 ? 4 : 12, 108);
       g_TextLib.posDialogText = PAL_XY(iNumCharFace > 0 ? 20 : 44, 126);
