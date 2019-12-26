@@ -34,6 +34,8 @@ int paused = 0;
 int isfLoop = -1;
 int volume = PSP_AUDIO_VOLUME_MAX;
 
+int data_starthm = 0;
+
 int fd = -1;
 SceUID thid = 0;
 SceUID monitor_thid;
@@ -67,6 +69,67 @@ void error( char* msg )
 	pspDebugScreenClear();
 	pspDebugScreenSetXY(0, 0);
 	printf(msg);
+}
+
+// The functions of ID3v2TagSize and swapInt32BigToHost are modified from the functions of the same names in the project of 
+// 
+//    LightMP3
+//    Copyright (C) 2007,2008 Sakya
+//    sakya_tg@yahoo.it
+//
+//    This program is free software; you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation; either version 2 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program; if not, write to the Free Software
+//    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+int swapInt32BigToHost(int arg)
+{
+	int i = 0;
+	int checkEndian = 1;
+	if (1 == *(char*)& checkEndian)
+	{
+		// Intel (little endian)
+		i = arg;
+		i = ((i & 0xFF000000) >> 24) | ((i & 0x00FF0000) >> 8) | ((i & 0x0000FF00) << 8) | ((i & 0x000000FF) << 24);
+	}
+	else
+	{
+		// PPC (big endian)
+		i = arg;
+	}
+	return i;
+}
+
+int ID3v2TagSize(void)
+{
+	int size;
+	char sig[3];
+
+	sceIoRead(fd, sig, sizeof(sig));
+	if (strncmp("ID3", sig, 3) == 0) {
+		return 0;
+	}
+
+	sceIoLseek(fd, 6, PSP_SEEK_SET);
+	sceIoRead(fd, &size, sizeof(unsigned int));
+	/*
+	 *  The ID3 tag size is encoded with four bytes where the first bit
+	 *  (bit 7) is set to zero in every byte, making a total of 28 bits. The zeroed
+	 *  bits are ignored, so a 257 bytes long tag is represented as $00 00 02 01.
+	 */
+
+	size = (unsigned int)swapInt32BigToHost((int)size);
+	size = (((size & 0x7f000000) >> 3) | ((size & 0x7f0000) >> 2) | ((size & 0x7f00) >> 1) | (size & 0x7f));
+	return size;
 }
 
 void clearFileNameCache(void)
@@ -308,9 +371,16 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 		return 0;
 	}
 	// Reserve a mp3 handle for our playback
+
+
+
 	SceMp3InitArg mp3Init;
-	mp3Init.mp3StreamStart = 0;
 	mp3Init.mp3StreamEnd = sceIoLseek32(fd, 0, SEEK_END);
+	data_starthm = data_starthm = ID3v2TagSize();
+	if (data_starthm > (mp3Init.mp3StreamEnd - 1000)) {
+		data_starthm = 0;
+	}
+	mp3Init.mp3StreamStart = data_starthm;
 	mp3Init.unk1 = 0;
 	mp3Init.unk2 = 0;
 	mp3Init.mp3Buf = mp3Buf;
