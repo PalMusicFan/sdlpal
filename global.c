@@ -198,8 +198,8 @@ PAL_InitGlobals(
    gpGlobals->f.fpF = UTIL_OpenRequiredFile("f.mkf");
 #ifndef PSP
    gpGlobals->f.fpFIRE = UTIL_OpenRequiredFile("fire.mkf");
-#endif
    gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
+#endif
    gpGlobals->f.fpSSS = UTIL_OpenRequiredFile("sss.mkf");
 
 #ifdef PSP
@@ -274,8 +274,8 @@ PAL_FreeGlobals(
    UTIL_CloseFile(gpGlobals->f.fpF);
 #ifndef PSP
    UTIL_CloseFile(gpGlobals->f.fpFIRE);
-#endif
    UTIL_CloseFile(gpGlobals->f.fpRGM);
+#endif
    UTIL_CloseFile(gpGlobals->f.fpSSS);
 
    //

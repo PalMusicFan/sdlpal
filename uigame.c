@@ -1127,6 +1127,9 @@ PAL_PlayerStatus(
       //
       PAL_FBPBlitToSurface(bufBackground, gpScreen);
 
+#ifdef PSP
+	  gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
+#endif
       //
       // Draw the image of player role
       //
@@ -1134,6 +1137,9 @@ PAL_PlayerStatus(
       {
          PAL_RLEBlitToSurface(bufImage, gpScreen, gConfig.ScreenLayout.RoleImage);
       }
+#ifdef PSP
+	  UTIL_CloseFile(gpGlobals->f.fpRGM);
+#endif
 
       //
       // Draw the equipments
