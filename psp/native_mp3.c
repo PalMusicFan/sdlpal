@@ -91,15 +91,17 @@ int fillStreamBuffer( int fd, int handle )
 	status = sceIoLseek32( fd, pos, SEEK_SET );
 	if (status > 0x80000000)
 	{
-		// UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoLseek32 returned =  0x%x \n", status);
+		sceKernelDelayThread(1000000);
+		UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoLseek32 returned =  0x%x \n", status);
 	}
 	
 	// Read the amount of data
 	ioread = sceIoRead( fd, dst, iowrite );
 	if (ioread > 0x80000000)
 	{
+		sceKernelDelayThread(1000000);
 		ioread_err = 1;
-		// UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoRead returned =  0x%x \n", status);
+		UTIL_LogOutput(LOGLEVEL_WARNING, "sceIoRead returned =  0x%x \n", status);
 	}
 	
 	if (ioread == 0)
