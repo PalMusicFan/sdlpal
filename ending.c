@@ -269,6 +269,10 @@ PAL_ScrollFBP(
          PAL_FadeIn(gpGlobals->wNumPalette, gpGlobals->fNightPalette, 1);
          gpGlobals->fNeedToFadeIn = FALSE;
          VIDEO_UpdateSurfacePalette(p);
+#ifdef PSP
+		 // VIDEO_UpdateScreen(NULL) is needed here in the PSP version. 
+		 VIDEO_UpdateScreen(NULL);
+#endif
       }
 
       UTIL_Delay(800 / wScrollSpeed);
