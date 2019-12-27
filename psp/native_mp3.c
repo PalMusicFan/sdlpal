@@ -118,7 +118,6 @@ int ID3v2TagSize(void)
 	sceIoRead(fd, sig, sizeof(sig));
 
 	if (strncmp("ID3", sig, sizeof(char) * 3) != 0) {
-		UTIL_LogOutput(LOGLEVEL_INFO, "NO ID3v2Tag found! return 0 \n");
 		return 0;
 	}
 
