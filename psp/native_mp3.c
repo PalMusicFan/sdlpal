@@ -114,12 +114,15 @@ int ID3v2TagSize(void)
 	int size;
 	char sig[3];
 
+	sceIoLseek(fd, 0, SEEK_SET);
 	sceIoRead(fd, sig, sizeof(sig));
-	if (strncmp("ID3", sig, 3) == 0) {
+
+	if (strncmp("ID3", sig, sizeof(char) * 3) != 0) {
+		UTIL_LogOutput(LOGLEVEL_INFO, "NO ID3v2Tag found! return 0 \n");
 		return 0;
 	}
 
-	sceIoLseek(fd, 6, PSP_SEEK_SET);
+	sceIoLseek(fd, 6, SEEK_SET);
 	sceIoRead(fd, &size, sizeof(unsigned int));
 	/*
 	 *  The ID3 tag size is encoded with four bytes where the first bit
@@ -130,6 +133,23 @@ int ID3v2TagSize(void)
 	size = (unsigned int)swapInt32BigToHost((int)size);
 	size = (((size & 0x7f000000) >> 3) | ((size & 0x7f0000) >> 2) | ((size & 0x7f00) >> 1) | (size & 0x7f));
 	return size;
+}
+
+int ID3v1TagPos(void) {
+	char sig[3];
+
+	if (sceIoLseek(fd, 0, SEEK_END) < sizeof(char) * 128) {
+		return sceIoLseek32(fd, 0, SEEK_END);
+	}
+
+	sceIoLseek(fd, -128 * sizeof(char), SEEK_END);
+	sceIoRead(fd, sig, sizeof(sig));
+
+	if (strncmp("TAG", sig, sizeof(char) * 3) != 0) {
+		return sceIoLseek32(fd, 0, SEEK_END);
+	}else {
+		return sceIoLseek32(fd, 0, SEEK_END) - 128 * sizeof(char) ;
+	}
 }
 
 void clearFileNameCache(void)
@@ -375,8 +395,10 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 
 
 	SceMp3InitArg mp3Init;
-	mp3Init.mp3StreamEnd = sceIoLseek32(fd, 0, SEEK_END);
-	data_starthm = data_starthm = ID3v2TagSize();
+	// ID3v1TagPos() - sizeof(char) means the real MP3 data end position. 
+	mp3Init.mp3StreamEnd = ID3v1TagPos() - sizeof(char);
+	// data_starthm indicates the real MP3 data start position. 
+	data_starthm = ID3v2TagSize();
 	if (data_starthm > (mp3Init.mp3StreamEnd - 1000)) {
 		data_starthm = 0;
 	}
