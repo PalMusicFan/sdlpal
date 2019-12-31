@@ -37,6 +37,8 @@
 # define PAL_HAS_PLATFORM_SPECIFIC_UTILS    1
 # define PAL_HAS_PLATFORM_STARTUP           1
 
+# define PAL_FORCE_UPDATE_ON_PALETTE_SET    1
+
 # include <strings.h>
 
 # define VERS 2
@@ -47,6 +49,7 @@
 #endif
 
 # define printf pspDebugScreenPrintf
+# define PAL_FATAL_OUTPUT(s) screenPrintf(s)
 #endif
 
 #endif

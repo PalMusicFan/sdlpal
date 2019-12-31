@@ -23,11 +23,15 @@
 #include "../util.h"
 #include "../audio.h"
 
+#include "fdman.h"
+
 int handle = -1;
 int status = -1;
 int isrunning = 0;
 int monitor_isrunning = 0;
 int monitor_lock = 0;
+
+int playingNativeMP3 = 0;
 
 int paused = 0;
 
@@ -210,17 +214,17 @@ int MP3MonitorCallbackThread(void)
 
 			monitor_lock = 1;
 
-			UTIL_LogOutput(LOGLEVEL_WARNING, "ioread_err DETECTED! monitor_lock = %d\n", monitor_lock);
+			// UTIL_LogOutput(LOGLEVEL_WARNING, "ioread_err DETECTED! monitor_lock = %d\n", monitor_lock);
 
 			getcwd(cwd_buff, PAL_MAX_PATH);
-			UTIL_LogOutput(LOGLEVEL_DEBUG, "getcwd returned =  %s \n", cwd_buff);
+			// UTIL_LogOutput(LOGLEVEL_INFO, "getcwd returned =  %s \n", cwd_buff);
 			sceIoChdir(cwd_buff);
 
 			sceKernelDelayThread(50000);
 
 			stopNativeMP3();
 
-			UTIL_LogOutput(LOGLEVEL_DEBUG, "stopNativeMP3 \n");
+			// UTIL_LogOutput(LOGLEVEL_INFO, "stopNativeMP3 \n");
 
 			sceKernelDelayThread(50000);
 
@@ -233,7 +237,7 @@ int MP3MonitorCallbackThread(void)
 
 			playNativeMP3(monitor_MP3filename, current_floop, current_iMusicVolume);
 
-			UTIL_LogOutput(LOGLEVEL_DEBUG, "playNativeMP3 \n");
+			// UTIL_LogOutput(LOGLEVEL_INFO, "OK! Now playNativeMP3... \n");
 
 			monitor_lock = 0;
 		}
@@ -356,8 +360,16 @@ int initNativeMP3(void)
 int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 {
 	// Open the input file
+	/*
+	for (int i = 3; i <= 13; i++) {
+		if (__psp_descriptormap[i]) {
+			UTIL_LogOutput(LOGLEVEL_INFO, "__psp_descriptormap[%d]->filename =  %s \n", i, __psp_descriptormap[i]->filename);
+		}
+	}
+	*/
+	UTIL_LogOutput(LOGLEVEL_INFO, "filename =  %s \n", filename);
 
-	UTIL_LogOutput(LOGLEVEL_DEBUG, "filename =  %s \n", filename);
+	// UTIL_LogOutput(LOGLEVEL_INFO, "HERE!!!!! sceIoLseek %s  = 0x%x \n", __psp_descriptormap[3]->filename, sceIoLseek(__psp_descriptormap[3]->sce_descriptor, 0, SEEK_CUR));
 
 	current_floop = fLoop;
 	current_iMusicVolume = iMusicVolume;
@@ -369,11 +381,11 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 		strcpy(MP3filename, filename);
 	}
 
-	UTIL_LogOutput(LOGLEVEL_DEBUG, "MP3filename =  %s \n", MP3filename);
+	UTIL_LogOutput(LOGLEVEL_INFO, "MP3filename =  %s \n", MP3filename);
 
 	fd = sceIoOpen(MP3filename, PSP_O_RDONLY, 0777);
 
-	UTIL_LogOutput(LOGLEVEL_DEBUG, "sceIoOpen returns 0x%x \n", fd);
+	UTIL_LogOutput(LOGLEVEL_INFO, "sceIoOpen returns 0x%x \n", fd);
 
 	if (fd <= 0 || fd > 63)
 	{
@@ -450,6 +462,8 @@ int playNativeMP3(const char* filename, int fLoop, int iMusicVolume)
 	{
 		isrunning = 1;
 		sceKernelStartThread(thid, 0, 0);
+		playingNativeMP3 = 1;
+		UTIL_LogOutput(LOGLEVEL_WARNING, "OKOKOK! playingNativeMP3 \n");
 		return fd;
 	}
 	else {
@@ -464,6 +478,8 @@ int stopNativeMP3(void)
 
 	sceKernelWaitThreadEnd(thid, NULL);
 	sceKernelDeleteThread(thid);
+
+	playingNativeMP3 = 0;
 
 	// Cleanup time...
 	if (channel >= 0)

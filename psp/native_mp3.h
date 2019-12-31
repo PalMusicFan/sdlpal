@@ -29,7 +29,17 @@
 #include <pspmp3.h>
 #include <psputility.h>
 
+#include "../common.h"
+
+SceUID thid;
+int playingNativeMP3;
 int ioread_err;
+
+char MP3filename[PAL_MAX_PATH];
+char monitor_MP3filename[PAL_MAX_PATH];
+int current_floop;
+int current_iMusicVolume;
+char cwd_buff[PAL_MAX_PATH];
 
 void clearFileNameCache(void);
 int playNativeMP3(const char* filename, int fLoop, int iMusicVolume);

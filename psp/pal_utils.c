@@ -17,6 +17,44 @@
 
 #include "native_mp3.h"
 
+#include "fdman.h"
+
+#define	_FOPEN		(-1)	/* from sys/file.h, kernel use only */
+#define	_FREAD		0x0001	/* read enabled */
+#define	_FWRITE		0x0002	/* write enabled */
+#define	_FNDELAY	0x0800	/* non blocking I/O (4.2 style) */
+#define	_FAPPEND	0x0400	/* append (writes guaranteed at the end) */
+#define	_FMARK		0x0010	/* internal; mark during gc() */
+#define	_FDEFER		0x0020	/* internal; defer for next gc pass */
+#define	_FASYNC		0x2000	/* signal pgrp when data ready */
+#define	_FCREAT		0x0040	/* open with file create */
+#define	_FTRUNC		0x0200	/* open with truncation */
+#define	_FEXCL		0x0080	/* error on open if file exists */
+#define	_FNBIO	    _FNONBLOCK	/* non blocking I/O (sys5 style) */
+#define	_FSYNC		0x1000	/* do all writes synchronously */
+#define	_FNONBLOCK	0x0800	/* non blocking I/O (POSIX style) */
+#define	_FNOCTTY	0x0100	/* don't assign a ctty on this open */
+
+#define	O_ACCMODE	(O_RDONLY|O_WRONLY|O_RDWR)
+
+/*
+ * Flag values for open(2) and fcntl(2)
+ * The kernel adds 1 to the open modes to turn it into some
+ * combination of FREAD and FWRITE.
+ */
+#define	O_RDONLY	0		/* +1 == FREAD */
+#define	O_WRONLY	1		/* +1 == FWRITE */
+#define	O_RDWR		2		/* +1 == FREAD|FWRITE */
+#define	O_APPEND	_FAPPEND
+#define	O_CREAT		_FCREAT
+#define	O_TRUNC		_FTRUNC
+#define	O_EXCL		_FEXCL
+ /*	O_SYNC		_FSYNC		not posix, defined below */
+ /*	O_NDELAY	_FNDELAY 	set in include/fcntl.h */
+ /*	O_NDELAY	_FNBIO 		set in 5include/fcntl.h */
+#define	O_NONBLOCK	_FNONBLOCK
+#define	O_NOCTTY	_FNOCTTY
+
 PSP_MODULE_INFO("SDLPAL", PSP_MODULE_USER, VERS, REVS);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
 PSP_HEAP_SIZE_MAX();
@@ -29,6 +67,8 @@ static unsigned int old_button = 0;
 static unsigned char old_x = 0, old_y = 0;
 
 int dynamic_freq = 0;
+
+long fileseekpoints[32];
 
 BOOL
 UTIL_GetScreenSize(
@@ -49,9 +89,61 @@ UTIL_IsAbsolutePath(
 
 int PSP_resume_callback(int unknown, int pwrflags, void* common)
 {
+	scePowerLock(0);
+	UTIL_LogOutput(LOGLEVEL_INFO, "PSP_resume_callback pwrflags =  0x%x \n", pwrflags);
 	if (pwrflags & PSP_POWER_CB_RESUME_COMPLETE)
 	{
+		UTIL_LogOutput(LOGLEVEL_INFO, "PSP_POWER_CB_RESUME_COMPLETE \n");
 		// On certian PSP-1000 system, file handles will be invalid after PSP_POWER_CB_RESUME_COMPLETE 
+
+		for (int i = 3; i < 13; i++) {
+			if (__psp_descriptormap[i]) {
+
+				int scefd;
+				int sce_flags;
+
+				int seekpos;
+				UTIL_LogOutput(LOGLEVEL_INFO, "%s seekpoint = 0x%x \n", __psp_descriptormap[i]->filename, fileseekpoints[i]);
+				
+				/* O_RDONLY starts at 0, where PSP_O_RDONLY starts at 1, so remap the read/write
+				   flags by adding 1. */
+				sce_flags = (__psp_descriptormap[i]->flags & O_ACCMODE) + 1;
+
+				/* Translate standard open flags into the flags understood by the PSP kernel. */
+				if (__psp_descriptormap[i]->flags & O_APPEND) {
+					sce_flags |= PSP_O_APPEND;
+				}
+				if (__psp_descriptormap[i]->flags & O_CREAT) {
+					sce_flags |= PSP_O_CREAT;
+				}
+				if (__psp_descriptormap[i]->flags & O_TRUNC) {
+					sce_flags |= PSP_O_TRUNC;
+				}
+				if (__psp_descriptormap[i]->flags & O_EXCL) {
+					sce_flags |= PSP_O_EXCL;
+				}
+				if (__psp_descriptormap[i]->flags & O_NONBLOCK) {
+					sce_flags |= PSP_O_NBLOCK;
+				}
+
+				scefd = sceIoOpen(__psp_descriptormap[i]->filename, sce_flags, 0777);
+				__psp_descriptormap[i]->sce_descriptor = scefd;
+				seekpos = sceIoLseek(__psp_descriptormap[i]->sce_descriptor, fileseekpoints[i], SEEK_SET);
+				UTIL_LogOutput(LOGLEVEL_INFO, "seekpos = 0x%x \n", seekpos);
+			}
+		}
+		UTIL_LogOutput(LOGLEVEL_INFO, "RESUME MP3filename = %s \n", MP3filename);
+		// Clear the filename cache. 
+		memset(monitor_MP3filename, 0, PAL_MAX_PATH);
+		// Cache the filename. 
+		strcpy(monitor_MP3filename, MP3filename);
+
+		getcwd(cwd_buff, PAL_MAX_PATH);
+		UTIL_LogOutput(LOGLEVEL_INFO, "getcwd returned =  %s \n", cwd_buff);
+		sceIoChdir(cwd_buff);
+
+		playNativeMP3(monitor_MP3filename, current_floop, current_iMusicVolume);
+		/*
 		fclose(gpGlobals->f.fpFBP);
 		gpGlobals->f.fpFBP = UTIL_OpenRequiredFile("fbp.mkf");
 		fclose(gpGlobals->f.fpMGO);
@@ -68,10 +160,31 @@ int PSP_resume_callback(int unknown, int pwrflags, void* common)
 		//gpGlobals->f.fpRGM = UTIL_OpenRequiredFile("rgm.mkf");
 		fclose(gpGlobals->f.fpSSS);
 		gpGlobals->f.fpSSS = UTIL_OpenRequiredFile("sss.mkf");
+		*/
+	}else if (pwrflags & PSP_POWER_CB_POWER_SWITCH || pwrflags & PSP_POWER_CB_SUSPENDING) {
+
+		stopNativeMP3();
+		sceKernelDelayThread(1000000);
+		for (int i = 3; i < 13; i++) {
+			if (__psp_descriptormap[i]) {
+				UTIL_LogOutput(LOGLEVEL_INFO, "__psp_descriptormap[%d]->filename =  %s \n", i, __psp_descriptormap[i]->filename);
+			}
+		}
+		for (int i = 3; i < 13; i++) {
+			UTIL_LogOutput(LOGLEVEL_INFO, "PSP_POWER_CB_SUSPENDING i = %d \n", i);
+			if (__psp_descriptormap[i]) {
+				// UTIL_LogOutput(LOGLEVEL_INFO, "ftell(%d) = %d \n", i, ftell(i));
+				fileseekpoints[i] = sceIoLseek(__psp_descriptormap[i]->sce_descriptor, 0, SEEK_CUR);
+				UTIL_LogOutput(LOGLEVEL_INFO, "fileseekpoints[%d] = 0x%x \n", i, fileseekpoints[i]);
+				sceIoClose(__psp_descriptormap[i]->sce_descriptor);
+			}
+		}
 	}
+
 	int cbid;
 	cbid = sceKernelCreateCallback("suspend Callback", PSP_resume_callback, NULL);
 	scePowerRegisterCallback(0, cbid);
+	scePowerUnlock(0);
 	return 0;
 }
 
@@ -283,6 +396,26 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 	return 1;
 }
 
+void screenPrintf(char* s) {
+	printf("MESSAGE: \n");
+	for (int i = 3; i < 13; i++) {
+		if (__psp_descriptormap[i]) {
+			printf("__psp_descriptormap[%d]->filename =  %s \n", i, __psp_descriptormap[i]->filename);
+		}
+	}
+	printf(s);
+	sceKernelDelayThread(10000000);
+}
+
+void
+UTIL_LogToScreen(
+	LOGLEVEL       _,
+	const char* string,
+	const char* __
+)
+{
+	printf(string);
+}
 
 INT
 UTIL_Platform_Init(
@@ -290,6 +423,9 @@ UTIL_Platform_Init(
 	char* argv[]
 )
 {
+	pspDebugScreenInit();
+	UTIL_LogAddOutputCallback(UTIL_LogToScreen, gConfig.iLogLevel);
+
 	sceCtrlSetSamplingCycle(0);
 	sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 	pad.Buttons = 0;
