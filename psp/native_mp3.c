@@ -476,31 +476,35 @@ int stopNativeMP3(void)
 {
 	isrunning = 0;
 
-	sceKernelWaitThreadEnd(thid, NULL);
-	sceKernelDeleteThread(thid);
+	if (playingNativeMP3 == 1) {
+		sceKernelWaitThreadEnd(thid, NULL);
+		sceKernelDeleteThread(thid);
 
-	playingNativeMP3 = 0;
+		playingNativeMP3 = 0;
 
-	// Cleanup time...
-	if (channel >= 0)
-		sceAudioSRCChRelease();
+		// Cleanup time...
+		if (channel >= 0)
+			sceAudioSRCChRelease();
 
-	status = sceMp3ReleaseMp3Handle(handle);
-	if (status < 0)
-	{
-		ERRORMSG("ERROR: sceMp3ReleaseMp3Handle returned 0x%08X\n", status);
+		status = sceMp3ReleaseMp3Handle(handle);
+		if (status < 0)
+		{
+			ERRORMSG("ERROR: sceMp3ReleaseMp3Handle returned 0x%08X\n", status);
+		}
+
+		status = sceMp3TermResource();
+		if (status < 0)
+		{
+			ERRORMSG("ERROR: sceMp3TermResource returned 0x%08X\n", status);
+		}
+		status = sceIoClose(fd);
+		if (status < 0)
+		{
+			ERRORMSG("ERROR: sceIoClose returned 0x%08X\n", status);
+		}
 	}
 
-	status = sceMp3TermResource();
-	if (status < 0)
-	{
-		ERRORMSG("ERROR: sceMp3TermResource returned 0x%08X\n", status);
-	}
-	status = sceIoClose(fd);
-	if (status < 0)
-	{
-		ERRORMSG("ERROR: sceIoClose returned 0x%08X\n", status);
-	}
+
 	return 1;
 	
 }
