@@ -1,7 +1,8 @@
 TARGET = sdlpal
 
 SOURCES  = . .. ../adplug \
-../liboggvorbis/src ../liboggvorbis/src/modes ../liboggvorbis/src/books/coupled ../liboggvorbis/src/books/floor ../liboggvorbis/src/books/uncoupled
+../liboggvorbis/src ../liboggvorbis/src/modes ../liboggvorbis/src/books/coupled ../liboggvorbis/src/books/floor ../liboggvorbis/src/books/uncoupled \
+../libopusfile/src ../libopusfile/celt ../libopusfile/silk ../libopusfile/silk/float
 CFILES   = $(foreach dir, $(SOURCES), $(wildcard $(dir)/*.c))
 CPPFILES = $(foreach dir, $(SOURCES), $(wildcard $(dir)/*.cpp))
 
@@ -10,10 +11,12 @@ OBJS = $(CFILES:.c=$(INTER).o) $(CPPFILES:.cpp=$(INTER).o)
 PSPSDK = $(shell psp-config --pspsdk-path)
 
 INCDIR = 
-CFLAGS = -O3 -G0 -Wall -g -I/usr/local/pspdev/psp/include/SDL \
+CFLAGS = -O2 -G0 -Wall -g -I/usr/local/pspdev/psp/include/SDL \
 -I../liboggvorbis/include -I../liboggvorbis/src -I../liboggvorbis/src/modes \
 -I../liboggvorbis/src/books/coupled -I../liboggvorbis/src/books/floor -I../liboggvorbis/src/books/uncoupled \
- -DPSP=1 -std=gnu99 -D_GNU_SOURCE
+-I../liboggvorbis/include -I../libopusfile/include -I../libopusfile/src -I../libopusfile/celt -I../libopusfile/silk -I../libopusfile/silk/float \
+ -DPSP=1 -std=gnu99 -D_GNU_SOURCE -DHAVE_CONFIG_H
+
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -std=c++11 -I. -I../
 ASFLAGS = $(CFLAGS)
 
