@@ -7,7 +7,7 @@
 
 
 #ifdef PSP
-
+#define PAL_HAS_GLSL 0
 # define PAL_HAS_JOYSTICKS     1
 # define PAL_HAS_MOUSE         0
 # define PAL_HAS_MP3           1
@@ -17,8 +17,8 @@
 # define PAL_PREFIX            ""
 # define PAL_SAVE_PREFIX       ""
 
-# define PAL_DEFAULT_WINDOW_WIDTH   640
-# define PAL_DEFAULT_WINDOW_HEIGHT  400
+# define PAL_DEFAULT_WINDOW_WIDTH   480
+# define PAL_DEFAULT_WINDOW_HEIGHT  272
 
 # if SDL_VERSION_ATLEAST(2,0,0)
 #  define PAL_VIDEO_INIT_FLAGS  (SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE)
@@ -53,3 +53,5 @@
 #endif
 
 #endif
+
+

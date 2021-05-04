@@ -21,8 +21,8 @@ CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -std=c++11 -I. -I../
 ASFLAGS = $(CFLAGS)
 
 LIBDIR =
-LIBS = -L/usr/local/pspdev/psp/lib -lSDL -lm -lGL -lpspvfpu -L/usr/local/pspdev/psp/sdk/lib \
--lpspdebug -lpspgu -lpspctrl -lpspge -lpspdisplay -lpsphprm -lpspsdk -lpsprtc -lpspaudio -lpspmp3 -lc \
+LIBS = -L/usr/local/pspdev/psp/lib -lSDL -lME -lm -lGL -lpspvfpu -L/usr/local/pspdev/psp/sdk/lib \
+-lpspdebug -lpspgu -lpspctrl -lpspge -lpspdisplay -lpsphprm -lpspsdk -lpsprtc -lpspaudio -lpspmp3 -lpspvram -lc \
 -lpspuser -lpsputility -lpspkernel -lpspnet_inet -lpspirkeyb -lpsppower \
  -lstdc++
 

@@ -1,6 +1,7 @@
 #include "../main.h"
 #include <math.h>
 #include <pspkernel.h>
+#include <pspdebug.h>
 #include <pspctrl.h>
 #include <SDL_thread.h>
 
@@ -18,6 +19,8 @@
 #include "native_mp3.h"
 
 #include "fdman.h"
+
+extern SDL_Surface       *gpScreenReal;
 
 #define	_FOPEN		(-1)	/* from sys/file.h, kernel use only */
 #define	_FREAD		0x0001	/* read enabled */
@@ -56,8 +59,9 @@
 #define	O_NOCTTY	_FNOCTTY
 
 PSP_MODULE_INFO("SDLPAL", PSP_MODULE_USER, VERS, REVS);
-PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
-PSP_HEAP_SIZE_MAX();
+PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+//PSP_HEAP_SIZE_MAX();
+PSP_HEAP_SIZE_KB(-1024);
 
 static SceCtrlData pad;
 static SDL_sem *pad_sem = 0;
@@ -76,7 +80,8 @@ UTIL_GetScreenSize(
 	DWORD *pdwScreenHeight
 )
 {
-	return FALSE;
+	return (pdwScreenWidth && pdwScreenHeight && *pdwScreenWidth && *pdwScreenHeight);
+	//return TRUE;
 }
 
 BOOL
@@ -372,6 +377,7 @@ static int input_event_filter(const SDL_Event* lpEvent, volatile PALINPUTSTATE* 
 		{
 			// MP3 ioread error handling tester. 
             // ioread_err = 1;
+            SDL_SaveBMP(gpScreen, "somefile.bmp");
 			return 1;
 		}
 		if (button & PSP_CTRL_SELECT)
@@ -423,7 +429,14 @@ UTIL_Platform_Init(
 	char* argv[]
 )
 {
-	pspDebugScreenInit();
+	//pspDebugScreenInit();
+	//printf("UTIL_Platform_Init()\n");
+	//sceKernelDelayThread(10000000);
+
+
+
+
+
 	UTIL_LogAddOutputCallback(UTIL_LogToScreen, gConfig.iLogLevel);
 
 	sceCtrlSetSamplingCycle(0);
@@ -458,6 +471,42 @@ UTIL_Platform_Init(
 		ERRORMSG("ERROR: sceUtilityLoadModule(PSP_MODULE_AV_MP3) returned 0x%08X\n", status);
 	}
 	*/
+
+
+
+
+
+/*
+//TESTER!
+pspDebugScreenInit();
+printf("adlib_init ME BEOFRE J_DispatchJobs!\n");
+printf("adlib_init ME BEOFRE J_DispatchJobs!\n");
+printf("adlib_init ME BEOFRE J_DispatchJobs!\n");
+printf("adlib_init ME BEOFRE J_DispatchJobs!\n");
+printf("adlib_init ME BEOFRE J_DispatchJobs!\n");
+
+
+	J_Init(false);
+	myJob = (struct Job*)malloc(sizeof(struct Job));
+	myJob->jobInfo.id = 1;
+	myJob->jobInfo.execMode = MELIB_EXEC_ME;
+
+	myJob->function = (JobFunction)&testloop;
+
+	myJob->data = (int)&spInt;
+
+	J_AddJob(myJob);
+
+/*
+
+	J_DispatchJobs(0.0f); //No dynamic rebalancing so this doesn't matter.
+
+printf("ME AFTER J_DispatchJobs!\n");
+printf("ME AFTER J_DispatchJobs!\n");
+printf("ME AFTER J_DispatchJobs!\n");
+printf("ME AFTER J_DispatchJobs!\n");
+printf("ME AFTER J_DispatchJobs!\n");
+*/
 	return 0;
 }
 

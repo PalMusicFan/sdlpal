@@ -1043,14 +1043,24 @@ static Bit16s OPL3_ClipSample(Bit32s sample)
     return (Bit16s)sample;
 }
 
-void OPL3_Generate(opl3_chip *chip, Bit16s *buf)
-{
+
+
+
+//TESTER!
     Bit8u ii;
     Bit8u jj;
     Bit16s accm;
     Bit8u shift = 0;
 
-    buf[1] = OPL3_ClipSample(chip->mixbuff[1]);
+    opl3_chip *chip;
+    Bit16s *buf;
+
+
+int spInt = 0;
+
+void nukedTest()
+{
+     buf[1] = OPL3_ClipSample(chip->mixbuff[1]);
 
     for (ii = 0; ii < 15; ii++)
     {
@@ -1173,6 +1183,37 @@ void OPL3_Generate(opl3_chip *chip, Bit16s *buf)
         chip->writebuf_cur = (chip->writebuf_cur + 1) % OPL_WRITEBUF_SIZE;
     }
     chip->writebuf_samplecnt++;
+}
+
+
+void testloop(){
+printf("FAKELOOP! spInt = %d", spInt);
+spInt++;
+}
+
+void OPL3_Generate(opl3_chip *chip_p, Bit16s *buf_p)
+{
+    /*
+    Bit8u ii;
+    Bit8u jj;
+    Bit16s accm;
+    Bit8u shift = 0;
+    */
+   shift = 0;
+   chip = chip_p;
+   buf = buf_p;
+
+   nukedTest();
+
+    struct Job* j = (struct Job*)malloc(sizeof(struct Job));
+	j->jobInfo.id = 1;
+	j->jobInfo.execMode = MELIB_EXEC_ME;
+
+	j->function = &testloop;
+	j->data = (int)&shift;
+
+	J_AddJob(j);
+    /**/
 }
 
 void OPL3_GenerateResampled(opl3_chip *chip, Bit16s *buf)

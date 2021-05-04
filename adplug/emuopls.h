@@ -45,6 +45,7 @@
 
 #include "../common.h"
 #include "opl.h"
+#include <alloca.h>
 
 class OPLCORE {
 public:

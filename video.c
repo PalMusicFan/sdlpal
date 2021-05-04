@@ -26,6 +26,10 @@
 // For "struct timeval tv" of VIDEO_SaveScreenshot
 # include <pspkernel.h>
 #endif
+#  define PIXELS 1
+BYTE newpixels[4*PIXELS*PIXELS];
+SDL_Surface *temp = NULL;
+
 
 // Screen buffer
 SDL_Surface              *gpScreen           = NULL;
@@ -166,6 +170,9 @@ VIDEO_Startup(
    gRenderBackend.CreateTexture = VIDEO_CreateTexture;
    gRenderBackend.RenderCopy = VIDEO_RenderCopy;
 
+   SDL_Surface *temp = SDL_CreateRGBSurfaceFrom(newpixels, PIXELS, PIXELS, 32, PIXELS, 0, 0, 0, 0);
+
+
 #if PAL_HAS_GLSL
    if( gConfig.fEnableGLSL) {
 	   gRenderBackend.Init = VIDEO_GLSL_Init;
@@ -194,6 +201,9 @@ VIDEO_Startup(
 		SDL_SetWindowIcon(gpWindow, surf);
 	}
 # endif
+
+
+//SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
    gpRenderer = SDL_CreateRenderer(gpWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
@@ -369,6 +379,16 @@ VIDEO_Shutdown(
 		VIDEO_GLSL_Destroy();
 	}
 #endif
+SDL_FreeSurface(temp);
+
+
+
+
+
+
+
+
+
 
    if (gpScreen != NULL)
    {
@@ -431,6 +451,15 @@ VIDEO_RenderCopy(
 	void *texture_pixels;
 	int texture_pitch;
 
+
+//printf("VIDEO_RenderCopy");
+//memset(newpixels, 0, sizeof(newpixels));
+
+//SDL_DestroyTexture(gpTexture);
+//gpTexture = gRenderBackend.CreateTexture(640, 400);
+//gpTexture = SDL_CreateTextureFromSurface(gpTexture, temp);
+
+
 	SDL_LockTexture(gpTexture, NULL, &texture_pixels, &texture_pitch);
 	memset(texture_pixels, 0, gTextureRect.y * texture_pitch);
 	uint8_t *pixels = (uint8_t *)texture_pixels + gTextureRect.y * texture_pitch;
@@ -452,6 +481,9 @@ VIDEO_RenderCopy(
 	{
 		SDL_RenderCopy(gpRenderer, gpTouchOverlay, NULL, &gOverlayRect);
 	}
+
+
+
 	SDL_RenderPresent(gpRenderer);
 }
 #endif
@@ -1418,3 +1450,9 @@ VIDEO_DrawSurfaceToScreen(
    SDL_FreeSurface(pCompatSurface);
 #endif
 }
+
+
+
+
+
+
