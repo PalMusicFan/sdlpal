@@ -611,7 +611,7 @@ AUDIO_PlayDub(
 	AUDIO_Lock();
 	if (gAudioDevice.pDubPlayer)
 	{
-		gAudioDevice.pDubPlayer->Play(gAudioDevice.pDubPlayer, iSid, iEid, iSeg, flFadeTime);
+		gAudioDevice.pDubPlayer->Play(gAudioDevice.pDubPlayer, DUB_SIG | ((int64_t)iSid << 32) | ((int64_t)iEid << 16) | iSeg, TRUE, flFadeTime);
 		UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] gAudioDevice.pDubPlayer->Play =  iSid-%.5d, iEid-%.5d, iSeg-%.5d\n", iSid, iEid, iSeg);
 	}
 	AUDIO_Unlock();

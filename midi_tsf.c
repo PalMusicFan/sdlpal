@@ -130,7 +130,7 @@ TSF_FillBuffer(
 static BOOL
 TSF_Play(
 	VOID	   *object,
-	int			iNum,
+	int64_t     iNum,
 	BOOL		fLoop,
 	FLOAT       flFadeTime
 )

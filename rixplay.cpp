@@ -296,7 +296,7 @@ RIX_Shutdown(
 static BOOL
 RIX_Play(
 	VOID     *object,
-	INT       iNumRIX,
+	int64_t   iNumRIX,
 	BOOL      fLoop,
 	FLOAT     flFadeTime
 )

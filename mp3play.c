@@ -84,7 +84,7 @@ MP3_Shutdown(
 static BOOL
 MP3_Play(
 	VOID       *object,
-	INT         iNum,
+	int64_t     iNum,
 	BOOL        fLoop,
 	FLOAT       flFadeTime
 	)

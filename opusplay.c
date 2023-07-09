@@ -51,7 +51,7 @@ typedef struct tagOPUSPLAYER
     int              fRewind;
     int              fUseResampler;
 
-    INT                        iNextMusic; // the next music number to switch to
+    int64_t                    iNextMusic; // the next music number to switch to
     DWORD                      dwStartFadeTime;
     INT                        iTotalFadeOutSamples;
     INT                        iTotalFadeInSamples;
@@ -59,6 +59,23 @@ typedef struct tagOPUSPLAYER
     enum { NONE, FADE_IN, FADE_OUT } FadeType; // fade in or fade out ?
     BOOL                       fNextLoop;
 } OPUSPLAYER, *LPOPUSPLAYER;
+
+BOOL OPUS_REAL_Play(VOID*, int64_t, BOOL, FLOAT);
+
+char* get_file_name(int64_t index) {
+    static char namebuf[PAL_GLOBAL_BUFFER_SIZE];
+    const char* sbuf;
+    if ((index & DUB_SIG) != 0) {
+        int iSid = (index & 0x0000ffff00000000) >> 32;
+        int iEid = (index & 0x00000000ffff0000) >> 16;
+        int iSeg =  index & 0x000000000000ffff;
+        sbuf = PAL_va(2, "opus%s%.5d-%.5d-%.2d.opus", PAL_NATIVE_PATH_SEPARATOR, iSid, iEid, iSeg);
+    }
+    else
+        sbuf = PAL_va(2, "opus%s%.2d.opus", PAL_NATIVE_PATH_SEPARATOR, index);
+    memcpy(namebuf, sbuf, PAL_GLOBAL_BUFFER_SIZE);
+    return namebuf;
+}
 
 PAL_FORCE_INLINE opus_int16 OPUS_GetSample(float pcm)
 {
@@ -371,7 +388,7 @@ OPUS_FillBuffer(
             }
             pOPUSPlayer->iRemainingFadeSamples -= j;
         }
-        while (ptr_r < stream+len)
+        while ((LPBYTE)ptr_r < stream+len)
             *ptr_r++ = volume;
     }
 
@@ -381,7 +398,7 @@ OPUS_FillBuffer(
 static BOOL
 OPUS_REAL_Play(
     VOID       *object,
-    INT         iNum,
+    int64_t     iNum,
     BOOL        fLoop,
     FLOAT       flFadeTime
 )
@@ -423,7 +440,7 @@ OPUS_REAL_Play(
         return FALSE;
     }
 
-    const char* filename = UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(2, "opus%s%.2d.opus", PAL_NATIVE_PATH_SEPARATOR, iNum));
+    const char* filename = UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, get_file_name(iNum));
     if (!filename)
         return FALSE;
 
@@ -447,7 +464,7 @@ OPUS_REAL_Play(
 static BOOL
 OPUS_Play(
     VOID* object,
-    INT       iNum,
+    int64_t   iNum,
     BOOL      fLoop,
     FLOAT     flFadeTime
 )
@@ -513,92 +530,6 @@ OPUS_Play(
     pOPUSPlayer->fReady = TRUE;
 
     return TRUE;
-}
-
-// Dub player HERE!
-static BOOL
-Dub_Play(
-	VOID* object,
-	INT       iSid,
-	INT       iEid,
-	INT       iSeg,
-	FLOAT     flFadeTime
-)
-/*++
-	Purpose:
-
-	Start playing the specified dub.
-
-	Parameters:
-
-	[IN]  iSid - Start ID of the dub file.
-
-	[IN]  iEid - End ID of the dub file.
-
-	[IN]  iSeg - Sub segment ID of the dub file.
-
-	[IN]  flFadeTime - the fade in/out time when switching dub.
-
-	Return value:
-
-	None.
-
---*/
-{
-	LPOPUSPLAYER player = (LPOPUSPLAYER)object;
-	static char internal_buffer[PAL_GLOBAL_BUFFER_SIZE];
-	UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] Dub_Play =  iSid-%.5d, iEid-%.5d, iSeg-%.5d\n", iSid, iEid, iSeg);
-
-	// Do NOTHING if there is NO corresponding dub file.
-	if (access(UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(2, "opus%s%.5d-%.5d-%.2d.opus", iSid, iEid, iSeg)), 0) < 0)
-	{
-		UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] FILE NOT FOUND\n");
-		return FALSE;
-	}
-
-	int ret;
-
-	if (player == NULL)
-	{
-		return FALSE;
-	}
-
-	player->fReady = FALSE;
-	OPUS_Cleanup(player);
-	if (player->fp)
-	{
-		op_free(player->fp);
-		player->fp = NULL;
-	}
-
-	player->iMusic = iSid;
-
-	if (iSid == -1)
-	{
-		return TRUE;
-	}
-
-
-	const char* filename = UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(2, "opus%s%.5d-%.5d-%.2d.opus", iSid, iEid, iSeg));
-	if (!filename)
-		return FALSE;
-
-	player->fp = op_open_file(filename, &ret);
-	UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] op_open_file =  iSid-%.5d, iEid-%.5d, iSeg-%.5d\n", iSid, iEid, iSeg);
-	if (player->fp == NULL)
-	{
-		player->fReady = FALSE;
-		return FALSE;
-	}
-
-	if (!OPUS_Rewind(player))
-	{
-		op_free(player->fp);
-		player->fp = NULL;
-		return FALSE;
-	}
-
-	return TRUE;
 }
 
 static VOID

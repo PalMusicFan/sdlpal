@@ -297,4 +297,6 @@ typedef enum tagLOGLEVEL
 
 #include "adplug/opltypes.h"
 
+#define DUB_SIG 0x0D58000000000000
+
 #endif
