@@ -50,6 +50,14 @@ typedef struct tagOPUSPLAYER
     int              fReady;
     int              fRewind;
     int              fUseResampler;
+
+    INT                        iNextMusic; // the next music number to switch to
+    DWORD                      dwStartFadeTime;
+    INT                        iTotalFadeOutSamples;
+    INT                        iTotalFadeInSamples;
+    INT                        iRemainingFadeSamples;
+    enum { NONE, FADE_IN, FADE_OUT } FadeType; // fade in or fade out ?
+    BOOL                       fNextLoop;
 } OPUSPLAYER, *LPOPUSPLAYER;
 
 PAL_FORCE_INLINE opus_int16 OPUS_GetSample(float pcm)
@@ -113,8 +121,8 @@ static BOOL OPUS_Rewind(LPOPUSPLAYER player)
     return (player->fReady = TRUE);
 }
 
-static VOID
-OPUS_FillBuffer(
+static int
+OPUS_REAL_FillBuffer(
     VOID       *object,
     LPBYTE      stream,
     INT         len
@@ -124,7 +132,10 @@ OPUS_FillBuffer(
     int bytes_per_sample;
     LPOPUSPLAYER player = (LPOPUSPLAYER)object;
     if (!player->fReady) {
-        return;
+        return -1;
+    }
+    if (!player->fp) {
+        return -1;
     }
 
     total_bytes = 0;
@@ -136,6 +147,8 @@ OPUS_FillBuffer(
             if (read_count == 0) {
                 if (player->fLoop)
                     player->fRewind = TRUE;
+                else
+                    return -2;
             } else if (read_count < 0) {
                 if (read_count == OP_HOLE) {
                     /* Hole detected! Corrupt file segment? */
@@ -143,7 +156,7 @@ OPUS_FillBuffer(
                 }
                 /* Stop playing on other errors */
                 player->fReady = FALSE;
-                return;
+                return -1;
             } else {
                 player->iBufLen = read_count * 2;
             }
@@ -205,10 +218,168 @@ OPUS_FillBuffer(
             total_bytes += out_count * bytes_per_sample;
         }
     }
+    return 0;
+}
+
+static VOID
+OPUS_FillBuffer(
+    VOID* object,
+    LPBYTE     stream,
+    INT        len
+)
+/*++
+    Purpose:
+
+    Fill the background music into the sound buffer. Called by the SDL sound
+    callback function only (audio.c: AUDIO_FillBuffer).
+
+    Parameters:
+
+    [OUT] stream - pointer to the stream buffer.
+
+    [IN]  len - Length of the buffer.
+
+    Return value:
+
+    None.
+
+--*/
+{
+    LPOPUSPLAYER pOPUSPlayer = (LPOPUSPLAYER)object;
+
+    if (pOPUSPlayer == NULL || !pOPUSPlayer->fReady)
+    {
+        //
+        // Not initialized
+        //
+        return;
+    }
+
+    INT       volume, delta_samples = 0, vol_delta = 0;
+
+    //
+    // fading in or fading out
+    //
+    switch (pOPUSPlayer->FadeType)
+    {
+    case FADE_IN:
+        if (pOPUSPlayer->iRemainingFadeSamples <= 0)
+        {
+            pOPUSPlayer->FadeType = NONE;
+            volume = SDL_MIX_MAXVOLUME;
+        }
+        else
+        {
+            volume = (INT)(SDL_MIX_MAXVOLUME * (1.0 - (double)pOPUSPlayer->iRemainingFadeSamples / pOPUSPlayer->iTotalFadeInSamples));
+            delta_samples = (pOPUSPlayer->iTotalFadeInSamples / SDL_MIX_MAXVOLUME) & ~(gConfig.iAudioChannels - 1); vol_delta = 1;
+        }
+        break;
+    case FADE_OUT:
+        if (pOPUSPlayer->iTotalFadeOutSamples == pOPUSPlayer->iRemainingFadeSamples && pOPUSPlayer->iTotalFadeOutSamples > 0)
+        {
+            UINT  now = SDL_GetTicks();
+            INT   passed_samples = ((INT)(now - pOPUSPlayer->dwStartFadeTime) > 0) ? (INT)((now - pOPUSPlayer->dwStartFadeTime) * AUDIO_GetDeviceSpec()->freq / 1000) : 0;
+            pOPUSPlayer->iRemainingFadeSamples -= passed_samples;
+        }
+        if (pOPUSPlayer->iMusic == -1 || pOPUSPlayer->iRemainingFadeSamples <= 0)
+        {
+            //
+            // There is no current playing music, or fading time has passed.
+            // Start playing the next one or stop playing.
+            //
+            if (pOPUSPlayer->iNextMusic > 0)
+            {
+                OPUS_REAL_Play(object, pOPUSPlayer->iNextMusic, pOPUSPlayer->fNextLoop, 0);
+                pOPUSPlayer->iMusic = pOPUSPlayer->iNextMusic;
+                pOPUSPlayer->iNextMusic = -1;
+                pOPUSPlayer->fLoop = pOPUSPlayer->fNextLoop;
+                pOPUSPlayer->FadeType = FADE_IN;
+                if (pOPUSPlayer->iMusic > 0)
+                    pOPUSPlayer->dwStartFadeTime += pOPUSPlayer->iTotalFadeOutSamples * 1000 / gConfig.iSampleRate;
+                else
+                    pOPUSPlayer->dwStartFadeTime = SDL_GetTicks();
+                pOPUSPlayer->iTotalFadeOutSamples = 0;
+                pOPUSPlayer->iRemainingFadeSamples = pOPUSPlayer->iTotalFadeInSamples;
+                if (pOPUSPlayer->resampler[0]) resampler_clear(pOPUSPlayer->resampler[0]);
+                if (pOPUSPlayer->resampler[1]) resampler_clear(pOPUSPlayer->resampler[1]);
+                return;
+            }
+            else
+            {
+                OPUS_REAL_Play(object, pOPUSPlayer->iNextMusic, pOPUSPlayer->fNextLoop, 0);
+                pOPUSPlayer->iMusic = -1;
+                pOPUSPlayer->FadeType = NONE;
+                return;
+            }
+        }
+        else
+        {
+            volume = (INT)(SDL_MIX_MAXVOLUME * ((double)pOPUSPlayer->iRemainingFadeSamples / pOPUSPlayer->iTotalFadeOutSamples));
+            delta_samples = (pOPUSPlayer->iTotalFadeOutSamples / SDL_MIX_MAXVOLUME) & ~(gConfig.iAudioChannels - 1); vol_delta = -1;
+        }
+        break;
+    default:
+        if (pOPUSPlayer->iMusic <= 0)
+        {
+            //
+            // No current playing music
+            //
+            return;
+        }
+        else
+        {
+            volume = SDL_MIX_MAXVOLUME;
+        }
+    }
+
+    //
+    // Fill the buffer with sound data
+    //
+    LPBYTE local_stream = (LPBYTE)malloc(len);
+    memset(local_stream, 0, len);
+    int ret = OPUS_REAL_FillBuffer(object, local_stream, len);
+    if (ret == -1)
+        return;
+
+    if (ret == -2)
+    {
+        //
+        // Not loop, simply terminate the music
+        //
+        OPUS_REAL_Play(object, pOPUSPlayer->iMusic, pOPUSPlayer->fLoop, 0);
+        pOPUSPlayer->iMusic = -1;
+        if (pOPUSPlayer->FadeType != FADE_OUT && pOPUSPlayer->iNextMusic == -1)
+            pOPUSPlayer->FadeType = NONE;
+        return;
+    }
+    //
+    // Put audio data into buffer and adjust volume
+    //
+    memcpy(stream, local_stream, len);
+    if (pOPUSPlayer->FadeType != NONE)
+    {
+        short* ptr_l = (short*)local_stream;
+        short* ptr_r = (short*)stream;
+        for (int i = 0; i < len/2 && pOPUSPlayer->iRemainingFadeSamples > 0; volume += vol_delta)
+        {
+            int j = 0;
+            volume = volume < 0 ? 0 : volume;
+            volume = volume > SDL_MIX_MAXVOLUME ? SDL_MIX_MAXVOLUME : volume;
+            for (j = 0; i < len/2 && j < delta_samples; i++, j++)
+            {
+                *ptr_r++ = *ptr_l++ * volume / SDL_MIX_MAXVOLUME;
+            }
+            pOPUSPlayer->iRemainingFadeSamples -= j;
+        }
+        while (ptr_r < stream+len)
+            *ptr_r++ = volume;
+    }
+
+    free(local_stream);
 }
 
 static BOOL
-OPUS_Play(
+OPUS_REAL_Play(
     VOID       *object,
     INT         iNum,
     BOOL        fLoop,
@@ -252,9 +423,14 @@ OPUS_Play(
         return FALSE;
     }
 
-    player->fp = op_open_file(UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(0, "opus%s%.2d.opus", PAL_NATIVE_PATH_SEPARATOR, iNum)), &ret);
+    const char* filename = UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(2, "opus%s%.2d.opus", PAL_NATIVE_PATH_SEPARATOR, iNum));
+    if (!filename)
+        return FALSE;
+
+    player->fp = op_open_file(filename, &ret);
     if (player->fp == NULL)
     {
+        player->fReady = FALSE;
         return FALSE;
     }
 
@@ -266,6 +442,163 @@ OPUS_Play(
     }
 
     return TRUE;
+}
+
+static BOOL
+OPUS_Play(
+    VOID* object,
+    INT       iNum,
+    BOOL      fLoop,
+    FLOAT     flFadeTime
+)
+/*++
+    Purpose:
+
+    Start playing the specified music.
+
+    Parameters:
+
+    [IN]  iNum - number of the music. 0 to stop playing current music.
+
+    [IN]  fLoop - Whether the music should be looped or not.
+
+    [IN]  flFadeTime - the fade in/out time when switching music.
+
+    Return value:
+
+    None.
+
+--*/
+{
+    LPOPUSPLAYER pOPUSPlayer = (LPOPUSPLAYER)object;
+
+    //
+    // Check for NULL pointer.
+    //
+    if (pOPUSPlayer == NULL)
+    {
+        return FALSE;
+    }
+
+    if (iNum == pOPUSPlayer->iMusic && pOPUSPlayer->iNextMusic == -1)
+    {
+        /* Will play the same music without any pending play changes,
+           just change the loop attribute */
+        pOPUSPlayer->fLoop = fLoop;
+        return TRUE;
+    }
+
+    if (pOPUSPlayer->FadeType != FADE_OUT)
+    {
+        if (pOPUSPlayer->FadeType == FADE_IN && pOPUSPlayer->iTotalFadeInSamples > 0 && pOPUSPlayer->iRemainingFadeSamples > 0)
+        {
+            pOPUSPlayer->dwStartFadeTime = SDL_GetTicks() - (int)((float)pOPUSPlayer->iRemainingFadeSamples / pOPUSPlayer->iTotalFadeInSamples * flFadeTime * (1000 / 2));
+        }
+        else
+        {
+            pOPUSPlayer->dwStartFadeTime = SDL_GetTicks();
+        }
+        pOPUSPlayer->iTotalFadeOutSamples = (int)round(flFadeTime / 2.0f * gConfig.iSampleRate) * gConfig.iAudioChannels;
+        pOPUSPlayer->iRemainingFadeSamples = pOPUSPlayer->iTotalFadeOutSamples;
+        pOPUSPlayer->iTotalFadeInSamples = pOPUSPlayer->iTotalFadeOutSamples;
+    }
+    else
+    {
+        pOPUSPlayer->iTotalFadeInSamples = (int)round(flFadeTime / 2.0f * gConfig.iSampleRate) * gConfig.iAudioChannels;
+    }
+
+    pOPUSPlayer->iNextMusic = iNum;
+    pOPUSPlayer->FadeType = FADE_OUT;
+    pOPUSPlayer->fNextLoop = fLoop;
+    pOPUSPlayer->fReady = TRUE;
+
+    return TRUE;
+}
+
+// Dub player HERE!
+static BOOL
+Dub_Play(
+	VOID* object,
+	INT       iSid,
+	INT       iEid,
+	INT       iSeg,
+	FLOAT     flFadeTime
+)
+/*++
+	Purpose:
+
+	Start playing the specified dub.
+
+	Parameters:
+
+	[IN]  iSid - Start ID of the dub file.
+
+	[IN]  iEid - End ID of the dub file.
+
+	[IN]  iSeg - Sub segment ID of the dub file.
+
+	[IN]  flFadeTime - the fade in/out time when switching dub.
+
+	Return value:
+
+	None.
+
+--*/
+{
+	LPOPUSPLAYER player = (LPOPUSPLAYER)object;
+	static char internal_buffer[PAL_GLOBAL_BUFFER_SIZE];
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] Dub_Play =  iSid-%.5d, iEid-%.5d, iSeg-%.5d\n", iSid, iEid, iSeg);
+
+	// Do NOTHING if there is NO corresponding dub file.
+	if (access(UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(2, "opus%s%.5d-%.5d-%.2d.opus", iSid, iEid, iSeg)), 0) < 0)
+	{
+		UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] FILE NOT FOUND\n");
+		return FALSE;
+	}
+
+	int ret;
+
+	if (player == NULL)
+	{
+		return FALSE;
+	}
+
+	player->fReady = FALSE;
+	OPUS_Cleanup(player);
+	if (player->fp)
+	{
+		op_free(player->fp);
+		player->fp = NULL;
+	}
+
+	player->iMusic = iSid;
+
+	if (iSid == -1)
+	{
+		return TRUE;
+	}
+
+
+	const char* filename = UTIL_GetFullPathName(internal_buffer, PAL_GLOBAL_BUFFER_SIZE, gConfig.pszGamePath, PAL_va(2, "opus%s%.5d-%.5d-%.2d.opus", iSid, iEid, iSeg));
+	if (!filename)
+		return FALSE;
+
+	player->fp = op_open_file(filename, &ret);
+	UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] op_open_file =  iSid-%.5d, iEid-%.5d, iSeg-%.5d\n", iSid, iEid, iSeg);
+	if (player->fp == NULL)
+	{
+		player->fReady = FALSE;
+		return FALSE;
+	}
+
+	if (!OPUS_Rewind(player))
+	{
+		op_free(player->fp);
+		player->fp = NULL;
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 static VOID

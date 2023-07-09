@@ -41,6 +41,10 @@ typedef struct tagAUDIODEVICE
 {
    SDL_AudioSpec             spec;		/* Actual-used sound specification */
    AUDIOPLAYER              *pMusPlayer;
+   // Dub Player HERE!
+   AUDIOPLAYER              *pDubPlayer;
+   void                     *pDubBuffer;	/* The output buffer for dub */
+
    AUDIOPLAYER              *pCDPlayer;
 #if PAL_HAS_SDLCD
    SDL_CD                   *pCD;
@@ -173,6 +177,29 @@ AUDIO_FillBuffer(
    }
 
    //
+   // Play Dub HERE!
+   //
+   if (gAudioDevice.fMusicEnabled && gAudioDevice.iMusicVolume > 0)
+   {
+	   memset(gAudioDevice.pDubBuffer, 0, len);
+
+	   if (gAudioDevice.pDubPlayer)
+	   {
+		   gAudioDevice.pDubPlayer->FillBuffer(gAudioDevice.pDubPlayer, gAudioDevice.pDubBuffer, len);
+	   }
+
+	   //
+	   // Adjust volume for dub
+	   //
+	   AUDIO_AdjustVolume((short*)gAudioDevice.pDubBuffer, gAudioDevice.iSoundVolume, len >> 1);
+
+	   //
+	   // Mix sound & music & dub
+	   //
+	   AUDIO_MixNative((short*)stream, gAudioDevice.pDubBuffer, len >> 1);
+   }
+
+   //
    // Play sound for AVI
    //
    AVI_FillAudioBuffer(AVI_GetPlayState(), (LPBYTE)stream, len);
@@ -271,6 +298,9 @@ AUDIO_OpenDevice(
    {
       UTIL_LogOutput(LOGLEVEL_VERBOSE, "OpenAudio succeed, got spec:freq %d, format %d, channels %d, samples %d\n", spec.freq, spec.format, spec.channels,  spec.samples);
       gAudioDevice.pSoundBuffer = malloc(gConfig.wAudioBufferSize * gConfig.iAudioChannels * sizeof(short));
+
+	  // Dub player HERE!
+	  gAudioDevice.pDubBuffer = malloc(gConfig.wAudioBufferSize * gConfig.iAudioChannels * sizeof(short));
    }
 
    gAudioDevice.fOpened = TRUE;
@@ -306,7 +336,12 @@ AUDIO_OpenDevice(
    default:
 	   break;
    }
-
+   
+   // Dub player HERE!
+   //
+   // Initialize the Dub subsystem.
+   //
+   gAudioDevice.pDubPlayer = OPUS_Init();
    //
    // Initialize the CD audio.
    //
@@ -391,6 +426,13 @@ AUDIO_CloseDevice(
    {
 	   gAudioDevice.pMusPlayer->Shutdown(gAudioDevice.pMusPlayer);
 	   gAudioDevice.pMusPlayer = NULL;
+   }
+
+   // Dub player HERE!
+   if (gAudioDevice.pDubPlayer)
+   {
+	   gAudioDevice.pDubPlayer->Shutdown(gAudioDevice.pDubPlayer);
+	   gAudioDevice.pDubPlayer = NULL;
    }
 
    if (gAudioDevice.pCDPlayer)
@@ -553,6 +595,26 @@ AUDIO_PlayMusic(
       gAudioDevice.pMusPlayer->Play(gAudioDevice.pMusPlayer, iNumRIX, fLoop, flFadeTime);
    }
    AUDIO_Unlock();
+}
+
+// Dub player HERE!
+
+VOID
+AUDIO_PlayDub(
+	INT       iSid,
+	INT       iEid,
+	INT       iSeg,
+	FLOAT     flFadeTime
+)
+{
+
+	AUDIO_Lock();
+	if (gAudioDevice.pDubPlayer)
+	{
+		gAudioDevice.pDubPlayer->Play(gAudioDevice.pDubPlayer, iSid, iEid, iSeg, flFadeTime);
+		UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] gAudioDevice.pDubPlayer->Play =  iSid-%.5d, iEid-%.5d, iSeg-%.5d\n", iSid, iEid, iSeg);
+	}
+	AUDIO_Unlock();
 }
 
 BOOL

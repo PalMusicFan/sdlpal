@@ -63,6 +63,15 @@ AUDIO_PlayMusic(
    FLOAT     flFadeTime
 );
 
+// Dub player HERE!
+VOID
+AUDIO_PlayDub(
+	INT       iSid,
+	INT       iEid,
+	INT       iSeg,
+	FLOAT     flFadeTime
+);
+
 BOOL
 AUDIO_PlayCDTrack(
    INT    iNumTrack

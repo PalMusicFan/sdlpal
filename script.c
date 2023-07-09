@@ -24,6 +24,15 @@
 
 #include "main.h"
 
+
+// Dub player HERE!
+
+int iSid = 0;
+int iEid = 0;
+int iSeg = 0;
+int isPlayingDub = 0;
+
+
 BOOL            g_fScriptSuccess = TRUE;
 static int      g_iCurEquipPart = -1;
 
@@ -3413,9 +3422,36 @@ PAL_RunTriggerScript(
                   PAL_ClearDialog(TRUE);
                   VIDEO_RestoreScreen(gpScreen);
                   VIDEO_UpdateScreen(NULL);
+
+				  // Dub player HERE!
+				  //有一个换屏，配音子序号增加。
+				  iSeg++;
+				  isPlayingDub = 0;
                }
-			   else
-                  PAL_ShowDialogText(PAL_GetMsg(iMsg));
+			   else {
+
+			  
+				   // Dub player HERE!
+				   if (!isPlayingDub)
+				   {
+					   UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] pScript->rgwOperand[0] =  %.5d, DubSID %.5d-DubEID-%.5d-DubSEG %.2d\n", pScript->rgwOperand[0], iSid, iEid, iSeg);
+					   iSid = pScript->rgwOperand[0];
+					   AUDIO_PlayDub(iSid, iEid, iSeg, 0);
+					   //设定配音编号，运行AUDIO_DubStart播放配音。
+					   isPlayingDub = 1;
+				   }
+			       if (g_TextLib.nCurrentDialogLine > 3)
+			       {
+				       //有一个自动换屏，配音子序号增加。
+				       iSeg++;
+					   UTIL_LogOutput(LOGLEVEL_DEBUG, "[DUB] pScript->rgwOperand[0] =  %.5d, DubSID %.5d-DubEID-%.5d-DubSEG %.2d\n", pScript->rgwOperand[0], iSid, iEid, iSeg);
+					   iSid = pScript->rgwOperand[0];
+					   //AUDIO_PlayDub(iSid, iEid, iSeg, 0);
+				       //先设定配音编号，之后在text.c的PAL_ShowDialogText函数里，用户按键清屏后运行AUDIO_PlayDub播放配音。
+			       }
+
+                   PAL_ShowDialogText(PAL_GetMsg(iMsg));
+			   }
             }
          }
 		 else
