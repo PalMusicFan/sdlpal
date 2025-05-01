@@ -21,10 +21,10 @@ CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -std=c++11 -I. -I../
 ASFLAGS = $(CFLAGS)
 
 LIBDIR =
-
-LIBS =  -L/usr/local/pspdev/psp/lib -lSDL2main /usr/local/pspdev/psp/lib/libSDL2.a -lSDL2main /usr/local/pspdev/psp/lib/libSDL2.a -lm -lGL -lpspvram -lpspaudio -lpspvfpu -lpspdisplay -lpspgu -lpspge -lpsphprm -lpspctrl -lpsppower -lpspdebug -lstdc++ -L/usr/local/pspdev/psp/sdk/lib \
+LIBS = -L/usr/local/pspdev/psp/lib -lSDL2 -lm -lGL -lpspvfpu -L/usr/local/pspdev/psp/sdk/lib \
 -lpspdebug -lpspgu -lpspctrl -lpspge -lpspdisplay -lpsphprm -lpspsdk -lpspaudio -lpspmp3 -lc \
--lpspirkeyb -lpsppower
+-lpspvram -lpspirkeyb -lpsppower \
+ -lstdc++
 
 EXTRA_TARGETS = EBOOT.PBP
 PSP_EBOOT_TITLE = SDLPal

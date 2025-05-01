@@ -1,0 +1,100 @@
+diff --git a/palette.c b/palette.c
+index 48f3389..d3f3bc5 100644
+--- a/palette.c
++++ b/palette.c
+@@ -48,6 +48,8 @@ PAL_GetPalette(
+    INT                   i;
+    FILE                 *fp;
+ 
++   memset(palette, 0xff, sizeof(SDL_Color)*256);
++
+    fp = UTIL_OpenRequiredFile("pat.mkf");
+ 
+    //
+@@ -153,6 +155,8 @@ PAL_FadeOut(
+       palette[i] = VIDEO_GetPalette()[i];
+    }
+ 
++   memset(newpalette, 0xff, sizeof(SDL_Color)*256);
++
+    //
+    // Start fading out...
+    //
+@@ -214,6 +218,8 @@ PAL_FadeIn(
+    UINT                     time;
+    SDL_Color               *palette;
+    PAL_LARGE SDL_Color      newpalette[256];
++    
++   memset(newpalette, 0xff, sizeof(SDL_Color)*256);
+ 
+    //
+    // Get the new palette...
+@@ -281,6 +287,8 @@ PAL_SceneFade(
+    int                   i, j;
+    DWORD                 time;
+ 
++   memset(newpalette, 0xff, sizeof(SDL_Color)*256);
++
+    palette = PAL_GetPalette(iPaletteNum, fNight);
+ 
+    if (palette == NULL)
+@@ -477,6 +485,8 @@ PAL_ColorFade(
+    PAL_LARGE SDL_Color        newpalette[256];
+    int              i, j;
+ 
++   memset(newpalette, 0xff, sizeof(SDL_Color)*255);
++
+    palette = PAL_GetPalette(gpGlobals->wNumPalette, gpGlobals->fNightPalette);
+ 
+    iDelay *= 10;
+@@ -603,6 +613,8 @@ PAL_FadeToRed(
+    int                        i, j;
+    BYTE                       color;
+ 
++   memset(newpalette, 0xff, sizeof(SDL_Color)*255);
++    
+    palette = PAL_GetPalette(gpGlobals->wNumPalette, gpGlobals->fNightPalette);
+    memcpy(newpalette, palette, sizeof(newpalette));
+ 
+diff --git a/video.c b/video.c
+index d64f99b..5e4cd3a 100644
+--- a/video.c
++++ b/video.c
+@@ -427,7 +427,28 @@ VIDEO_RenderCopy(
+ 	void *texture_pixels;
+ 	int texture_pitch;
+ 
+-	SDL_LockTexture(gpTexture, NULL, &texture_pixels, &texture_pitch);
++    SDL_Texture* screenTexture = SDL_CreateTextureFromSurface(gpRenderer, gpScreenReal);
++    SDL_SetTextureScaleMode(screenTexture, gConfig.pszScaleQuality == NULL ? SDL_ScaleModeNearest : SDL_atoi( gConfig.pszScaleQuality ));
++    SDL_RenderClear(gpRenderer);
++    int w, h;
++    SDL_GetRendererOutputSize(gpRenderer, &w, &h);
++    float xScale = (float)w / gTextureRect.w;
++    float yScale = (float)h / gTextureRect.h;
++    if (gConfig.fKeepAspectRatio) {
++        xScale = (float)gConfig.dwTextureWidth / gTextureRect.w;
++        yScale = (float)gConfig.dwTextureHeight / gTextureRect.h;
++        float xRatio = (float)gConfig.dwTextureWidth / w;
++        float yRatio = (float)gConfig.dwTextureHeight / h;
++        float ratio = max(xRatio, yRatio);
++        xScale /= ratio;
++        yScale /= ratio;
++    }
++    SDL_Rect fRect = { gTextureRect.x * xScale, gTextureRect.y * yScale, gTextureRect.w * xScale, gTextureRect.h * yScale };
++    SDL_RenderCopy(gpRenderer, screenTexture, NULL, &fRect);
++    SDL_DestroyTexture(screenTexture);
++    
++	/*
++    SDL_LockTexture(gpTexture, NULL, &texture_pixels, &texture_pitch);
+ 	memset(texture_pixels, 0, gTextureRect.y * texture_pitch);
+ 	uint8_t *pixels = (uint8_t *)texture_pixels + gTextureRect.y * texture_pitch;
+ 	uint8_t *src = (uint8_t *)gpScreenReal->pixels;
+@@ -444,6 +465,7 @@ VIDEO_RenderCopy(
+ 
+ 	SDL_RenderClear(gpRenderer);
+ 	SDL_RenderCopy(gpRenderer, gpTexture, NULL, NULL);
++    */
+ 	if (gConfig.fUseTouchOverlay)
+ 	{
+ 		SDL_RenderCopy(gpRenderer, gpTouchOverlay, NULL, &gOverlayRect);
