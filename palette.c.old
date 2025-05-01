@@ -48,8 +48,6 @@ PAL_GetPalette(
    PAL_LARGE BYTE        buf[1536];
    INT                   i;
    FILE                 *fp;
-   
-memset(palette, 0xff, sizeof(SDL_Color)*256); //HERE!
 
    fp = UTIL_OpenRequiredFile("pat.mkf");
 
@@ -156,7 +154,6 @@ PAL_FadeOut(
       palette[i] = VIDEO_GetPalette()[i];
    }
 
-memset(newpalette, 0xff, sizeof(SDL_Color)*256); //HERE!
    //
    // Start fading out...
    //
@@ -235,8 +232,6 @@ PAL_FadeIn(
    UINT                     time;
    SDL_Color               *palette;
    PAL_LARGE SDL_Color      newpalette[256];
-
-memset(newpalette, 0xff, sizeof(SDL_Color)*256); //HERE!
 
    //
    // Get the new palette...
@@ -320,8 +315,6 @@ PAL_SceneFade(
    SDL_Color            *palette, newpalette[256];
    int                   i, j;
    DWORD                 time;
-   
-memset(newpalette, 0xff, sizeof(SDL_Color)*256); //HERE!
 
 #ifdef PSP
    //Switch to high performance mode for battle
@@ -541,8 +534,6 @@ PAL_ColorFade(
    PAL_LARGE SDL_Color        newpalette[256];
    int              i, j;
 
-memset(newpalette, 0xff, sizeof(SDL_Color)*256); //HERE!
-
 #ifdef PSP
    //Switch to high performance mode for battle
    PSP_switch_frequency(1);
@@ -673,8 +664,6 @@ PAL_FadeToRed(
    PAL_LARGE SDL_Color        newpalette[256];
    int                        i, j;
    BYTE                       color;
-
-memset(newpalette, 0xff, sizeof(SDL_Color)*256); //HERE!
 
 #ifdef PSP
    //Switch to high performance mode for battle

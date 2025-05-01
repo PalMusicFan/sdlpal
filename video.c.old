@@ -430,27 +430,7 @@ VIDEO_RenderCopy(
 {
 	void *texture_pixels;
 	int texture_pitch;
-    SDL_Texture* screenTexture = SDL_CreateTextureFromSurface(gpRenderer, gpScreenReal);
-    SDL_SetTextureScaleMode(screenTexture, gConfig.pszScaleQuality == NULL ? SDL_ScaleModeNearest : SDL_atoi( gConfig.pszScaleQuality ));
-    //SDL_SetTextureScaleMode(screenTexture, SDL_ScaleModeNearest);
-    SDL_RenderClear(gpRenderer);
-    int w, h;
-    SDL_GetRendererOutputSize(gpRenderer, &w, &h);
-    float xScale = (float)w / gTextureRect.w;
-    float yScale = (float)h / gTextureRect.h;
-    if (gConfig.fKeepAspectRatio) {
-        xScale = (float)gConfig.dwTextureWidth / gTextureRect.w;
-        yScale = (float)gConfig.dwTextureHeight / gTextureRect.h;
-        float xRatio = (float)gConfig.dwTextureWidth / w;
-        float yRatio = (float)gConfig.dwTextureHeight / h;
-        float ratio = max(xRatio, yRatio);
-        xScale /= ratio;
-        yScale /= ratio;
-    }
-    SDL_Rect fRect = { gTextureRect.x * xScale, gTextureRect.y * yScale, gTextureRect.w * xScale, gTextureRect.h * yScale };
-    SDL_RenderCopy(gpRenderer, screenTexture, NULL, &fRect);
-    SDL_DestroyTexture(screenTexture);
-/*  HERE!
+
 	SDL_LockTexture(gpTexture, NULL, &texture_pixels, &texture_pitch);
 	memset(texture_pixels, 0, gTextureRect.y * texture_pitch);
 	uint8_t *pixels = (uint8_t *)texture_pixels + gTextureRect.y * texture_pitch;
@@ -465,9 +445,9 @@ VIDEO_RenderCopy(
 	}
 	memset(pixels, 0, gTextureRect.y * texture_pitch);
 	SDL_UnlockTexture(gpTexture);
+
 	SDL_RenderClear(gpRenderer);
 	SDL_RenderCopy(gpRenderer, gpTexture, NULL, NULL);
-*/
 	if (gConfig.fUseTouchOverlay)
 	{
 		SDL_RenderCopy(gpRenderer, gpTouchOverlay, NULL, &gOverlayRect);
